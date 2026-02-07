@@ -68,6 +68,33 @@
             </p>
         </div>
 
+        <!-- generic url -->
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+            <label class="label">URL <span class="required">*</span></label>
+            <div class="control">
+                <input v-model="formData.url" class="input" type="text" name="url" required />
+            </div>
+        </div>
+
+        <!-- generic internal name -->
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+            <label class="label">Internal Name / ID <span class="required">*</span></label>
+            <div class="control">
+                <input v-model="formData.internalName" class="input" type="text" name="internalName" required />
+            </div>
+            <p class="input-help">Unique identifier for this stream (e.g. security_cam_1)</p>
+        </div>
+        
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+            <label class="label">Icon URL</label>
+            <div class="control">
+                <input v-model="formData.icon_url" class="input" type="text" name="icon_url" />
+            </div>
+            <p class="input-help">URL to an image to use as the channel icon</p>
+        </div>
+        
+
+
         <div v-if="channelData && channelData.login" class="field">
             <ul>
                 <li>
@@ -89,7 +116,7 @@
             </div>
         </div>
 
-        <div class="field">
+        <div v-if="formData.provider !== 'rtsp'" class="field">
             <label class="label">{{ t("forms.channel.quality") }} <span class="required">*</span></label>
             <div class="control">
                 <input ref="quality" v-model="formData.quality" class="input" type="text" name="quality" required />
@@ -241,7 +268,7 @@ const formData = ref({
     // slug: "",
     internalId: "",
     internalName: "",
-    quality: "",
+    quality: "best",
     match: "",
     download_chat: false,
     live_chat: false,
@@ -252,6 +279,11 @@ const formData = ref({
     max_vods: 0,
     download_vod_at_end: false,
     download_vod_at_end_quality: "best",
+    url: "",
+    schedule_enabled: false,
+    check_interval: 60,
+    max_check_duration: -1,
+    icon_url: "",
 });
 const channelData = ref<UserData>();
 const userExists = ref<boolean>();
@@ -263,6 +295,8 @@ const providers = [
     { value: "twitch", label: "Twitch", icon: "fab fa-twitch" },
     { value: "youtube", label: "YouTube" },
     { value: "kick", label: "Kick" },
+    { value: "rtsp", label: "RTSP" },
+    { value: "streamlink", label: "Streamlink" },
 ];
 
 // computed
@@ -311,7 +345,7 @@ function resetForm() {
         // slug: "",
         internalId: "",
         internalName: "",
-        quality: "",
+        quality: "best",
         match: "",
         download_chat: false,
         live_chat: false,
@@ -322,6 +356,11 @@ function resetForm() {
         max_vods: 0,
         download_vod_at_end: false,
         download_vod_at_end_quality: "best",
+        url: "",
+        schedule_enabled: false,
+        check_interval: 60,
+        max_check_duration: -1,
+        icon_url: "",
     };
 }
 

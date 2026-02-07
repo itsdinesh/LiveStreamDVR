@@ -41,6 +41,11 @@ export default class BaseChannel {
     chapter_data?: BaseVODChapterJSON;
 
     saves_vods = false;
+    schedule_enabled = false;
+    check_interval = 60;
+    check_interval_unit = "seconds";
+    max_check_duration = -1;
+    max_check_duration_unit = "minutes";
 
     download_vod_at_end = false;
     download_vod_at_end_quality: VideoQuality = "best";
@@ -50,6 +55,9 @@ export default class BaseChannel {
     internalId = "";
     url = "";
     profilePictureUrl = "";
+
+    next_check?: string;
+    check_timeout?: string;
 
     public static makeFromApiResponse(apiResponse: ApiBaseChannel): BaseChannel {
 
@@ -71,9 +79,16 @@ export default class BaseChannel {
         channel.is_live = apiResponse.is_live ?? false;
         channel.current_stream_number = apiResponse.current_stream_number ?? 0;
         channel.current_season = apiResponse.current_season ?? "";
-        
-        return channel;        
-        
+
+        channel.next_check = apiResponse.next_check;
+        channel.check_timeout = apiResponse.check_timeout;
+        channel.schedule_enabled = apiResponse.schedule_enabled || false;
+        channel.check_interval = apiResponse.check_interval || 60;
+        channel.check_interval_unit = apiResponse.check_interval_unit || "seconds";
+        channel.max_check_duration = apiResponse.max_check_duration || -1;
+        channel.max_check_duration_unit = apiResponse.max_check_duration_unit || "minutes";
+
+        return channel;
     }
 
     get current_vod(): BaseVOD | undefined {

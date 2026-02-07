@@ -53,7 +53,7 @@ export const nonGameCategories = [
     "Fitness & Health",
 ];
 
-export type Providers = "base" | "twitch" | "youtube" | "kick";
+export type Providers = "base" | "twitch" | "youtube" | "kick" | "rtsp" | "streamlink";
 
 // twitch vod age is 14 days then it's deleted
 export const TwitchVodAge = 14 * 24 * 60 * 60 * 1000;
@@ -83,19 +83,19 @@ export const NotificationCategories: {
     id: NotificationCategory;
     name: string;
 }[] = [
-    { id: "offlineStatusChange", name: "Offline status change" },
-    { id: "streamOnline", name: "Stream online" },
-    { id: "streamOffline", name: "Stream offline" },
-    { id: "streamStatusChange", name: "Stream status change" },
-    {
-        id: "streamStatusChangeFavourite",
-        name: "Stream status change with favourite game",
-    },
-    { id: "vodMuted", name: "VOD muted" },
-    { id: "vodDeleted", name: "VOD deleted" },
-    { id: "debug", name: "Debug" },
-    { id: "system", name: "System" },
-];
+        { id: "offlineStatusChange", name: "Offline status change" },
+        { id: "streamOnline", name: "Stream online" },
+        { id: "streamOffline", name: "Stream offline" },
+        { id: "streamStatusChange", name: "Stream status change" },
+        {
+            id: "streamStatusChangeFavourite",
+            name: "Stream status change with favourite game",
+        },
+        { id: "vodMuted", name: "VOD muted" },
+        { id: "vodDeleted", name: "VOD deleted" },
+        { id: "debug", name: "Debug" },
+        { id: "system", name: "System" },
+    ];
 
 export type NotificationCategory =
     | "offlineStatusChange"

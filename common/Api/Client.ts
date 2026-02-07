@@ -163,6 +163,16 @@ export interface ApiKickVod extends ApiBaseVod {
     // streamer_id: string;
 }
 
+// RTSP
+export interface ApiRTSPVod extends ApiBaseVod {
+    provider: "rtsp";
+}
+
+// Streamlink
+export interface ApiStreamlinkVod extends ApiBaseVod {
+    provider: "streamlink";
+}
+
 export type ApiSettingsField = {
     key: string;
     group: string;
@@ -211,6 +221,15 @@ export interface ApiBaseChannel {
     url: string;
     profilePictureUrl: string;
     cloud_storage?: boolean;
+
+    next_check?: string;
+    check_timeout?: string;
+    schedule_enabled?: boolean;
+    check_interval?: number;
+    check_interval_unit?: "seconds" | "minutes" | "hours";
+    max_check_duration?: number;
+    max_check_duration_unit?: "seconds" | "minutes" | "hours";
+    icon_url?: string;
 }
 
 export interface ApiTwitchChannel extends ApiBaseChannel {
@@ -265,8 +284,18 @@ export interface ApiKickChannel extends ApiBaseChannel {
     provider: "kick";
 }
 
-export type ApiChannels = ApiTwitchChannel | ApiYouTubeChannel | ApiKickChannel;
-export type ApiVods = ApiTwitchVod | ApiYouTubeVod | ApiKickVod;
+export interface ApiRTSPChannel extends ApiBaseChannel {
+    provider: "rtsp";
+    vods_list: ApiRTSPVod[];
+}
+
+export interface ApiStreamlinkChannel extends ApiBaseChannel {
+    provider: "streamlink";
+    vods_list: ApiStreamlinkVod[];
+}
+
+export type ApiChannels = ApiTwitchChannel | ApiYouTubeChannel | ApiKickChannel | ApiRTSPChannel | ApiStreamlinkChannel;
+export type ApiVods = ApiTwitchVod | ApiYouTubeVod | ApiKickVod | ApiRTSPVod | ApiStreamlinkVod;
 
 export type ApiSubscription = {
     type: string;
@@ -283,6 +312,7 @@ export type ApiChannelConfig = {
     provider: Providers;
     uuid: string;
     login?: string;
+    internalName?: string;
     channel_id?: string;
     match: string[];
     quality: VideoQuality[];
@@ -295,6 +325,12 @@ export type ApiChannelConfig = {
     max_vods: number;
     download_vod_at_end: boolean;
     download_vod_at_end_quality: VideoQuality;
+    schedule_enabled?: boolean;
+    check_interval?: number;
+    check_interval_unit?: "seconds" | "minutes" | "hours";
+    max_check_duration?: number;
+    max_check_duration_unit?: "seconds" | "minutes" | "hours";
+    icon_url?: string;
 };
 
 export type ApiJob = {

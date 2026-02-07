@@ -77,6 +77,16 @@
                                 (copy link and paste into desktop video player)
                             </li>
                         </ul>
+                        <!-- Stop Recording button for Streamlink/RTSP providers -->
+                        <button
+                            v-if="vod.provider === 'streamlink' || vod.provider === 'rtsp'"
+                            class="button is-small is-danger"
+                            :disabled="isStoppingRecording"
+                            @click="stopRecording"
+                        >
+                            <span class="icon"><font-awesome-icon icon="stop" /></span>
+                            <span>{{ isStoppingRecording ? 'Stopping...' : 'Stop Recording' }}</span>
+                        </button>
                         <!--<button class="button is-small is-danger" @click="unbreak">Unbreak</button>-->
                     </div>
                 </div>
@@ -93,6 +103,8 @@ import DurationDisplay from "@/components/reusables/DurationDisplay.vue";
 import { formatDate, humanDuration } from "@/mixins/newhelpers";
 import type { VODTypes } from "@/twitchautomator";
 import { computed, onMounted, ref } from "vue";
+import type { ApiResponse } from "@common/Api/Api";
+import axios from "axios";
 
 const store = useStore();
 const { t } = useI18n();
@@ -121,8 +133,45 @@ const emit = defineEmits<{
 
 const predictedFirstSegmentUrl = computed(() => {
     if (!props.vod) return "";
-    return `${props.vod.webpath}/${props.vod.basename}.ts`;
+    const ext = props.vod.provider === 'streamlink' || props.vod.provider === 'rtsp' ? 'mp4' : 'ts';
+    return `${props.vod.webpath}/${props.vod.basename}.${ext}`;
 });
+
+// Stop recording functionality for Streamlink/RTSP providers
+const isStoppingRecording = ref<boolean>(false);
+
+async function stopRecording() {
+    if (!props.vod) return;
+    
+    const channel = props.vod.getChannel();
+    if (!channel) {
+        alert("Could not find channel for this VOD");
+        return;
+    }
+    
+    if (!confirm("Are you sure you want to stop this recording?")) return;
+    
+    isStoppingRecording.value = true;
+    
+    try {
+        // Delete the capture job to stop the recording
+        const response = await axios.delete<ApiResponse>(`/api/v0/jobs/capture_${channel.internalName}_*`);
+        const data = response.data;
+        // Don't show alert - UI already reflects the stopped state
+        console.log("Recording stopped", data);
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error("stopRecording error", error.response);
+            if (error.response && error.response.data && error.response.data.message) {
+                alert(error.response.data.message);
+            } else {
+                alert("Failed to stop recording");
+            }
+        }
+    } finally {
+        isStoppingRecording.value = false;
+    }
+}
 </script>
 
 <style lang="scss" scoped>

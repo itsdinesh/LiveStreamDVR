@@ -12,6 +12,10 @@ import type { TwitchVOD } from "@/Core/Providers/Twitch/TwitchVOD";
 import type { TwitchVODChapter } from "@/Core/Providers/Twitch/TwitchVODChapter";
 import { YouTubeChannel } from "@/Core/Providers/YouTube/YouTubeChannel";
 import type { YouTubeVOD } from "@/Core/Providers/YouTube/YouTubeVOD";
+import { RTSPChannel } from "@/Core/Providers/RTSP/RTSPChannel";
+import type { RTSPVOD } from "@/Core/Providers/RTSP/RTSPVOD";
+import { StreamlinkChannel } from "@/Core/Providers/Streamlink/StreamlinkChannel";
+import type { StreamlinkVOD } from "@/Core/Providers/Streamlink/StreamlinkVOD";
 import { debugLog } from "@/Helpers/Console";
 import { formatBytes } from "@/Helpers/Format";
 import {
@@ -57,8 +61,8 @@ import { Webhook } from "./Webhook";
 
 const argv = minimist(process.argv.slice(2));
 
-export type ChannelTypes = TwitchChannel | YouTubeChannel | KickChannel;
-export type VODTypes = TwitchVOD | YouTubeVOD | KickVOD;
+export type ChannelTypes = TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel;
+export type VODTypes = TwitchVOD | YouTubeVOD | KickVOD | RTSPVOD | StreamlinkVOD;
 export type ChapterTypes = TwitchVODChapter | BaseVODChapter;
 
 export class LiveStreamDVR {
@@ -260,8 +264,7 @@ export class LiveStreamDVR {
                 log(
                     LOGLEVEL.WARNING,
                     "dvr.loadChannelsConfig",
-                    `Channel ${
-                        channel.internalId || channel.login
+                    `Channel ${channel.internalId || channel.login
                     } has no quality set, setting to default`
                 );
                 channel.quality = ["best"];
@@ -360,9 +363,8 @@ export class LiveStreamDVR {
                         log(
                             LOGLEVEL.FATAL,
                             "dvr.load.tw",
-                            `TW Channel ${
-                                channelConfig.internalName ||
-                                channelConfig.login
+                            `TW Channel ${channelConfig.internalName ||
+                            channelConfig.login
                             } could not be loaded: ${th}`
                         );
                         console.error(th);
@@ -377,18 +379,16 @@ export class LiveStreamDVR {
                         log(
                             LOGLEVEL.SUCCESS,
                             "dvr.load.tw",
-                            `Loaded channel ${
-                                channelConfig.internalName ||
-                                channelConfig.login
+                            `Loaded channel ${channelConfig.internalName ||
+                            channelConfig.login
                             } with ${ch.getVods().length} vods`
                         );
                         if (ch.no_capture) {
                             log(
                                 LOGLEVEL.WARNING,
                                 "dvr.load.tw",
-                                `Channel ${
-                                    channelConfig.internalName ||
-                                    channelConfig.login
+                                `Channel ${channelConfig.internalName ||
+                                channelConfig.login
                                 } is configured to not capture streams.`
                             );
                         }
@@ -396,9 +396,8 @@ export class LiveStreamDVR {
                         log(
                             LOGLEVEL.FATAL,
                             "dvr.load.tw",
-                            `Channel ${
-                                channelConfig.internalName ||
-                                channelConfig.login
+                            `Channel ${channelConfig.internalName ||
+                            channelConfig.login
                             } could not be added, please check logs.`
                         );
                         break;
@@ -426,8 +425,7 @@ export class LiveStreamDVR {
                         log(
                             LOGLEVEL.SUCCESS,
                             "dvr.load.yt",
-                            `Loaded channel ${ch.displayName} with ${
-                                ch.getVods().length
+                            `Loaded channel ${ch.displayName} with ${ch.getVods().length
                             } vods`
                         );
                         if (ch.no_capture) {
@@ -444,6 +442,42 @@ export class LiveStreamDVR {
                             `Channel ${channelConfig.channel_id} could not be added, please check logs.`
                         );
                         break;
+                    }
+                } else if (channelConfig.provider == "rtsp") {
+                    let ch: RTSPChannel;
+                    try {
+                        ch = await RTSPChannel.load(channelConfig.uuid);
+                    } catch (th) {
+                        log(LOGLEVEL.FATAL, "dvr.load.rtsp", `RTSP Channel ${channelConfig.internalName} could not be loaded: ${th}`);
+                        console.error(th);
+                        continue;
+                    }
+                    if (ch) {
+                        this.addChannel(ch);
+                        await ch.postLoad();
+                        ch.getVods().forEach((vod) => vod.postLoad());
+                        log(LOGLEVEL.SUCCESS, "dvr.load.rtsp", `Loaded RTSP channel ${ch.internalName}`);
+                        if (ch.config?.schedule_enabled) {
+                            await ch.startWatching();
+                        }
+                    }
+                } else if (channelConfig.provider == "streamlink") {
+                    let ch: StreamlinkChannel;
+                    try {
+                        ch = await StreamlinkChannel.load(channelConfig.uuid);
+                    } catch (th) {
+                        log(LOGLEVEL.FATAL, "dvr.load.streamlink", `Streamlink Channel ${channelConfig.internalName} could not be loaded: ${th}`);
+                        console.error(th);
+                        continue;
+                    }
+                    if (ch) {
+                        this.addChannel(ch);
+                        await ch.postLoad();
+                        ch.getVods().forEach((vod) => vod.postLoad());
+                        log(LOGLEVEL.SUCCESS, "dvr.load.streamlink", `Loaded Streamlink channel ${ch.internalName}`);
+                        if (ch.config?.schedule_enabled) {
+                            await ch.startWatching();
+                        }
                     }
                 }
             }
@@ -469,7 +503,7 @@ export class LiveStreamDVR {
         return (
             fs.existsSync(BaseConfigPath.channel) &&
             fs.readFileSync(BaseConfigPath.channel, "utf8") ===
-                JSON.stringify(this.channels_config, null, 4)
+            JSON.stringify(this.channels_config, null, 4)
         );
     }
 
@@ -479,16 +513,12 @@ export class LiveStreamDVR {
 
     public cleanLingeringVODs(): void {
         this.vods.forEach((vod) => {
-            let channel;
-            try {
-                channel = vod.getChannel();
-            } catch (error) {
+            const channel = vod.getChannel();
+            if (!channel) {
                 log(
                     LOGLEVEL.ERROR,
                     "dvr.cleanLingeringVODs",
-                    `Channel ${vod.getChannel().internalName} removed but VOD ${
-                        vod.basename
-                    } still lingering`
+                    `Channel for VOD ${vod.basename} removed or not found, but VOD still lingering`
                 );
             }
 
@@ -730,8 +760,7 @@ export class LiveStreamDVR {
                 } catch (error) {
                     console.log(
                         chalk.bgRed.whiteBright(
-                            `Could not compare version ${version} to ${oldVersion}: ${
-                                (error as Error).message
+                            `Could not compare version ${version} to ${oldVersion}: ${(error as Error).message
                             }`
                         )
                     );

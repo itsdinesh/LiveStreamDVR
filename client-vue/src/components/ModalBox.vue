@@ -1,7 +1,7 @@
 <template>
     <teleport to="body">
         <transition name="modal-transition">
-            <div v-if="show" class="modal-box" @click.self="$emit('close')">
+            <div v-if="show" class="modal-box" @click.self="overlayClick">
                 <div class="modal-box__container" :style="{ maxWidth: maxWidth }">
                     <div class="modal-box__header">
                         <div class="modal-box__title">
@@ -38,11 +38,21 @@ const props = defineProps({
         type: Boolean,
         default: false,
     },
+    cancelOnOverlayClick: {
+        type: Boolean,
+        default: true,
+    },
 });
 
 const emit = defineEmits(["close"]);
 
 function close() {
     emit("close");
+}
+
+function overlayClick() {
+    if (props.cancelOnOverlayClick) {
+        emit("close");
+    }
 }
 </script>

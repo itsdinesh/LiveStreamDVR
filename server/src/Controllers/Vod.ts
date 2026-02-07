@@ -269,9 +269,8 @@ export async function DeleteVodSegment(
     } catch (error) {
         res.api(400, {
             status: "ERROR",
-            message: `Vod segment could not be deleted: ${
-                (error as Error).message
-            }`,
+            message: `Vod segment could not be deleted: ${(error as Error).message
+                }`,
         } as ApiErrorResponse);
         return;
     }
@@ -289,7 +288,7 @@ export async function DownloadVod(
 
     const quality =
         req.query.quality &&
-        VideoQualityArray.includes(req.query.quality as string)
+            VideoQualityArray.includes(req.query.quality as string)
             ? (req.query.quality as VideoQuality)
             : "best";
 
@@ -584,9 +583,8 @@ export async function MatchVod(
 
     res.send({
         status: "OK",
-        message: `Vod matched to ${
-            vod.external_vod_id
-        }, duration ${formatDuration(vod.external_vod_duration || 0)}`,
+        message: `Vod matched to ${vod.external_vod_id
+            }, duration ${formatDuration(vod.external_vod_duration || 0)}`,
     } as ApiResponse);
 }
 
@@ -657,6 +655,14 @@ export async function CutVod(
     }
 
     const channel = vod.getChannel();
+
+    if (!channel) {
+        res.api(400, {
+            status: "ERROR",
+            message: "Channel not found for VOD",
+        } as ApiErrorResponse);
+        return;
+    }
 
     // const fps = vod.video_metadata.fps;
     // const seconds_in = Math.floor(time_in / fps);
@@ -912,15 +918,25 @@ export async function RenameVod(
 
     const template = req.body.template;
 
+    const channel = vod.getChannel();
+
+    if (!channel) {
+        res.api(400, {
+            status: "ERROR",
+            message: "Channel not found for VOD",
+        } as ApiErrorResponse);
+        return;
+    }
+
     const variables: VodBasenameTemplate = {
-        login: vod.getChannel().internalName,
-        internalName: vod.getChannel().internalName,
-        displayName: vod.getChannel().displayName,
+        login: channel.internalName,
+        internalName: channel.internalName,
+        displayName: channel.displayName,
         date: vod.started_at
             ? format(
-                  vod.started_at,
-                  TwitchHelper.TWITCH_DATE_FORMAT
-              ).replaceAll(":", "_")
+                vod.started_at,
+                TwitchHelper.TWITCH_DATE_FORMAT
+            ).replaceAll(":", "_")
             : "",
         year: vod.started_at ? format(vod.started_at, "yyyy") : "",
         year_short: vod.started_at ? format(vod.started_at, "yy") : "",

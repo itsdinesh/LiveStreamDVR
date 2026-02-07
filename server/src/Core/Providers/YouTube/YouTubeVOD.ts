@@ -105,8 +105,7 @@ export class YouTubeVOD extends BaseVOD {
         log(
             LOGLEVEL.SUCCESS,
             "vod.saveJSON",
-            `Saving JSON of ${this.basename} ${
-                reason ? " (" + reason + ")" : ""
+            `Saving JSON of ${this.basename} ${reason ? " (" + reason + ")" : ""
             }`
         );
 
@@ -120,14 +119,12 @@ export class YouTubeVOD extends BaseVOD {
             log(
                 LOGLEVEL.FATAL,
                 "vod.saveJSON",
-                `Failed to save JSON of ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save JSON of ${this.basename}: ${(error as Error).message
                 }`
             );
             console.log(
                 chalk.bgRedBright.whiteBright(
-                    `Failed to save JSON of ${this.basename}: ${
-                        (error as Error).message
+                    `Failed to save JSON of ${this.basename}: ${(error as Error).message
                     }`
                 )
             );
@@ -301,8 +298,7 @@ export class YouTubeVOD extends BaseVOD {
             log(
                 LOGLEVEL.WARNING,
                 "vod.getVideosProxy",
-                `Channel video search for ${channel_id} error: ${
-                    (error as Error).message
+                `Channel video search for ${channel_id} error: ${(error as Error).message
                 }`
             );
             return false;
@@ -331,8 +327,7 @@ export class YouTubeVOD extends BaseVOD {
             log(
                 LOGLEVEL.WARNING,
                 "vod.getVideosProxy",
-                `Channel video details for ${channel_id} error: ${
-                    (error as Error).message
+                `Channel video details for ${channel_id} error: ${(error as Error).message
                 }`
             );
             return false;
@@ -361,8 +356,8 @@ export class YouTubeVOD extends BaseVOD {
                 created_at: item.snippet?.publishedAt,
                 duration: item.id?.videoId
                     ? YouTubeHelper.parseYouTubeDuration(
-                          details[item.id?.videoId].duration || ""
-                      )
+                        details[item.id?.videoId].duration || ""
+                    )
                     : -1,
                 view_count: -1, // what
             } as ProxyVideo;
@@ -386,8 +381,7 @@ export class YouTubeVOD extends BaseVOD {
             log(
                 LOGLEVEL.WARNING,
                 "vod.getVideo",
-                `Channel video details for ${video_id} error: ${
-                    (error as Error).message
+                `Channel video details for ${video_id} error: ${(error as Error).message
                 }`
             );
             return false;
@@ -414,8 +408,8 @@ export class YouTubeVOD extends BaseVOD {
             created_at: item.snippet?.publishedAt,
             duration: item.contentDetails?.duration
                 ? YouTubeHelper.parseYouTubeDuration(
-                      item.contentDetails?.duration
-                  )
+                    item.contentDetails?.duration
+                )
                 : -1,
             view_count: -1, // what
             stream_id: item.id,
@@ -532,18 +526,13 @@ export class YouTubeVOD extends BaseVOD {
         return true;
     }
 
-    public getChannel(): YouTubeChannel {
-        if (!this.channel_uuid)
-            throw new Error("No channel UUID set for getChannel");
+    public getChannel(): YouTubeChannel | undefined {
+        if (!this.channel_uuid) return undefined;
         // return YouTubeChannel.getChannelByLogin(this.streamer_login);
         const channel =
             LiveStreamDVR.getInstance().getChannelByUUID<YouTubeChannel>(
                 this.channel_uuid
             );
-        if (!channel)
-            throw new Error(
-                `No channel found for getChannel (uuid: ${this.channel_uuid})`
-            );
-        return channel;
+        return channel || undefined;
     }
 }

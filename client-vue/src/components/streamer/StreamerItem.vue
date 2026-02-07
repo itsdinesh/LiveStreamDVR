@@ -20,22 +20,28 @@
                     &middot;
                     <span class="streamer-vods-size" title="Total vod size">{{ formatBytes(streamer.vods_size) }}</span
                     ><!-- total size -->
-                    &middot;
-                    <span class="streamer-subbed-status">
+                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-subbed-status">
+                        &middot;
                         <template v-if="streamer.api_getSubscriptionStatus">{{ t("messages.subscribed") }}</template>
                         <span v-else class="text-is-error" title="Could just be that subscriptions were made before this feature was implemented.">
                             {{ t("streamer.one-or-more-subscriptions-missing") }}
-                        </span></span
-                    ><!-- sub status -->
-                    &middot;
-                    <span class="streamer-type" title="Broadcaster type">
+                        </span>
+                    </span><!-- sub status -->
+                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-type" title="Broadcaster type">
+                        &middot;
                         <template v-if="streamer.broadcaster_type">{{ streamer.broadcaster_type }}</template>
                         <template v-else>Free</template>
                     </span>
-                    <span v-if="!streamer.saves_vods" class="streamer-saves-vods text-is-error"> &middot; {{ t("streamer.no-save-vods") }} </span>
+                    <span v-if="!streamer.saves_vods && streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-saves-vods text-is-error"> &middot; {{ t("streamer.no-save-vods") }} </span>
                     &middot;
                     <span class="streamer-sxe" title="Season and episode">
                         {{ streamer.current_season }}/{{ streamer.current_stream_number.toString().padStart(2, "0") }}
+                    </span>
+                    <span v-if="'next_check' in streamer && streamer.next_check" class="streamer-next-check">
+                         &middot; Next check in <Countdown :date="streamer.next_check" />
+                    </span>
+                    <span v-if="'check_timeout' in streamer && streamer.check_timeout" class="streamer-check-timeout" :title="`Checks stop at ${new Date(streamer.check_timeout).toLocaleString()}`">
+                         &middot; Checks end in <Countdown :date="streamer.check_timeout" />
                     </span>
                     <streamer-item-tools
                         :streamer="streamer"
@@ -104,6 +110,7 @@ import StreamerItemLocalVideos from "./StreamerItemLocalVideos.vue";
 import StreamerItemTools from "./StreamerItemTools.vue";
 import VideoDownloadModal from "../streamer/VideoDownloadModal.vue";
 import ClipDownloadModal from "../streamer/ClipDownloadModal.vue";
+import Countdown from "@/components/Countdown.vue";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faVideo, faPlayCircle, faVideoSlash, faDownload, faSync, faPencil, faFolderOpen, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useStore } from "@/store";

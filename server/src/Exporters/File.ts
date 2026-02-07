@@ -101,10 +101,12 @@ export class FileExporter extends BaseExporter {
             title = this.vod.external_vod_title;
         if (this.vod.chapters[0]) title = this.vod.chapters[0].title;
 
+        const channel = this.vod.getChannel();
+
         const replacements: ExporterFilenameTemplate = {
-            login: this.vod.getChannel().internalName,
-            internalName: this.vod.getChannel().internalName,
-            displayName: this.vod.getChannel().displayName,
+            login: channel?.internalName || "",
+            internalName: channel?.internalName || "",
+            displayName: channel?.displayName || "",
             title: title,
             date: format(this.vod.started_at, Config.getInstance().dateFormat),
             year: this.vod.started_at

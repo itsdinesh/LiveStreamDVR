@@ -78,7 +78,7 @@ onMounted(() => {
 });
 
 function internalNameFallback(channel: ApiChannelConfig) {
-    return store.channelUUIDToInternalName(channel.uuid) || channel.login || "<<unknown>>";
+    return store.channelUUIDToInternalName(channel.uuid) || channel.internalName || channel.login || "<<unknown>>";
 }
 
 function fetchData() {
@@ -97,7 +97,8 @@ function fetchData() {
                 return store.channelUUIDToInternalName(a.uuid).localeCompare(store.channelUUIDToInternalName(b.uuid));
             });
             formChannels.value = channels;
-            if (!currentChannel.value && formChannels.value.length > 0) {
+            formChannels.value = channels;
+            if ((!currentChannel.value || !formChannels.value.find((c) => c.uuid == currentChannel.value)) && formChannels.value.length > 0) {
                 router.replace({ params: { channel: formChannels.value[0].uuid } });
                 // this.currentChannel = formChannels.value[0].uuid;
             }

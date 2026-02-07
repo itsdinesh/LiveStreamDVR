@@ -569,8 +569,7 @@ export class TwitchVOD extends BaseVOD {
                     log(
                         LOGLEVEL.ERROR,
                         "tw.vod.downloadVideo",
-                        `Failed to add chapter to ${basename}: ${
-                            (e as Error).message
+                        `Failed to add chapter to ${basename}: ${(e as Error).message
                         }`
                     );
                 }
@@ -893,8 +892,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.getVideo",
-                `Tried to get video id ${video_id} but got error ${
-                    (err as Error).message
+                `Tried to get video id ${video_id} but got error ${(err as Error).message
                 }`
             );
             if (axios.isAxiosError(err)) {
@@ -902,8 +900,7 @@ export class TwitchVOD extends BaseVOD {
                     return false;
                 }
                 throw new Error(
-                    `Tried to get video id ${video_id} but got error: ${
-                        (err as Error).message
+                    `Tried to get video id ${video_id} but got error: ${(err as Error).message
                     }`
                 );
             }
@@ -962,8 +959,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.getVideos",
-                `Tried to get videos ${ids.join(", ")} but got error ${
-                    (err as Error).message
+                `Tried to get videos ${ids.join(", ")} but got error ${(err as Error).message
                 }`
             );
             if (axios.isAxiosError(err)) {
@@ -971,8 +967,7 @@ export class TwitchVOD extends BaseVOD {
                     return false;
                 }
                 throw new Error(
-                    `Tried to get videos ${ids.join(", ")} but got error: ${
-                        (err as Error).message
+                    `Tried to get videos ${ids.join(", ")} but got error: ${(err as Error).message
                     }`
                 );
             }
@@ -1106,8 +1101,7 @@ export class TwitchVOD extends BaseVOD {
         log(
             LOGLEVEL.DEBUG,
             "vod.getVideosProxy",
-            `Got ${
-                json.data.length
+            `Got ${json.data.length
             } videos for channel id ${channel_id}: ${JSON.stringify(json.data)}`
         );
 
@@ -1152,8 +1146,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.getVideoProxy",
-                `Tried to get video id ${video_id} but got error ${
-                    (err as Error).message
+                `Tried to get video id ${video_id} but got error ${(err as Error).message
                 }`
             );
             if (axios.isAxiosError(err)) {
@@ -1161,8 +1154,7 @@ export class TwitchVOD extends BaseVOD {
                     return false;
                 }
                 throw new Error(
-                    `Tried to get video id ${video_id} but got error: ${
-                        (err as Error).message
+                    `Tried to get video id ${video_id} but got error: ${(err as Error).message
                     }`
                 );
             }
@@ -1563,11 +1555,11 @@ export class TwitchVOD extends BaseVOD {
 
         this.bookmarks = this.json.bookmarks
             ? this.json.bookmarks.map((b) => {
-                  return {
-                      name: b.name,
-                      date: parseJSON(b.date),
-                  };
-              })
+                return {
+                    name: b.name,
+                    date: parseJSON(b.date),
+                };
+            })
             : [];
     }
 
@@ -1725,8 +1717,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.getFFProbe",
-                `Trying to get ffprobe of ${this.basename} returned: ${
-                    (th as Error).message
+                `Trying to get ffprobe of ${this.basename} returned: ${(th as Error).message
                 }`
             );
             return false;
@@ -2050,14 +2041,17 @@ export class TwitchVOD extends BaseVOD {
             const chapterStart = chapter.offset || 0;
             const chapterEnd = chapter.offset + chapter.duration;
 
-            let basepath = this.directory;
+            const channel = this.getChannel();
+            if (!channel) {
+                throw new Error("Channel not found for VOD chapter split");
+            }
 
-            const channelBasepath = this.getChannel().getFolder();
+            const channelBasepath = channel.getFolder();
 
             const chapterTemplateVariables: VodBasenameWithChapterTemplate = {
-                // login: this.getChannel().login,
-                internalName: this.getChannel().internalName,
-                displayName: this.getChannel().displayName,
+                // login: channel.login,
+                internalName: channel.internalName,
+                displayName: channel.displayName,
                 date: format(this.created_at, "yyyy-MM-dd"), // TODO: check format
                 year: format(this.created_at, "yyyy"),
                 year_short: format(this.created_at, "yy"),
@@ -2080,6 +2074,7 @@ export class TwitchVOD extends BaseVOD {
                 chapter_game_name: chapter.game_name,
             };
 
+            let basepath = channelBasepath;
             if (Config.getInstance().cfg<boolean>("vod_folders")) {
                 basepath = path.join(
                     channelBasepath,
@@ -2150,8 +2145,7 @@ export class TwitchVOD extends BaseVOD {
             } catch (error) {
                 if (isExecError(error)) {
                     throw new Error(
-                        `Chapter ${chapter.title} failed to split for ${
-                            this.basename
+                        `Chapter ${chapter.title} failed to split for ${this.basename
                         }: ${error.stderr.join("")}`
                     );
                 }
@@ -2263,8 +2257,13 @@ export class TwitchVOD extends BaseVOD {
             `Trying to match ${this.basename} to provider...`
         );
 
+        const channel = this.getChannel();
+        if (!channel) {
+            throw new Error("Channel not found for VOD provider matching");
+        }
+
         const channelVideos = await TwitchVOD.getLatestVideos(
-            this.getChannel().internalId
+            channel.internalId
         );
         if (!channelVideos) {
             log(
@@ -2303,10 +2302,8 @@ export class TwitchVOD extends BaseVOD {
                 log(
                     LOGLEVEL.SUCCESS,
                     "vod.matchProviderVod",
-                    `Found matching VOD for ${
-                        this.basename
-                    } (${this.started_at.toISOString()}): ${video.id} (${
-                        video.title
+                    `Found matching VOD for ${this.basename
+                    } (${this.started_at.toISOString()}): ${video.id} (${video.title
                     })`
                 );
 
@@ -2416,14 +2413,19 @@ export class TwitchVOD extends BaseVOD {
         const title = this.external_vod_title
             ? this.external_vod_title
             : this.chapters[0]
-            ? this.chapters[0].title
-            : this.basename;
+                ? this.chapters[0].title
+                : this.basename;
+
+        const channel = this.getChannel();
+        if (!channel) {
+            throw new Error("Channel not found for Kodi NFO generation");
+        }
 
         let data = "";
         data += '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n';
         data += "<episodedetails>\n";
         data += `\t<title>${htmlentities(title)}</title>\n`;
-        data += `\t<showtitle>${this.getChannel().displayName}</showtitle>\n`;
+        data += `\t<showtitle>${channel.displayName}</showtitle>\n`;
         data += `\t<uniqueid type="twitch">${this.external_vod_id}</uniqueid>\n`;
 
         data += `\t<season>${format(
@@ -2435,9 +2437,8 @@ export class TwitchVOD extends BaseVOD {
         if (this.chapters && this.chapters.length > 0) {
             let plot = "";
             this.chapters.forEach((chapter, index) => {
-                plot += `${index + 1}. ${chapter.title} (${
-                    chapter.game_name
-                })\n`;
+                plot += `${index + 1}. ${chapter.title} (${chapter.game_name
+                    })\n`;
             });
             data += `\t<plot>${htmlentities(plot)}</plot>\n`;
         }
@@ -2446,7 +2447,7 @@ export class TwitchVOD extends BaseVOD {
             data += `\t<runtime>${Math.ceil(this.duration / 60)}</runtime>\n`;
 
         data += "\t<actor>\n";
-        data += `\t\t<name>${this.getChannel().displayName}</name>\n`;
+        data += `\t\t<name>${channel.displayName}</name>\n`;
         data += "\t\t<role>Themselves</role>\n";
         data += "\t</actor>\n";
 
@@ -2466,7 +2467,7 @@ export class TwitchVOD extends BaseVOD {
             "yyyy-MM-dd"
         )}</dateadded>\n`;
         data += `\t<year>${format(this.started_at, "yyyy")}</year>\n`;
-        data += `\t<studio>${this.getChannel().displayName}</studio>\n`;
+        data += `\t<studio>${this.getChannel()?.displayName || "Unknown"}</studio>\n`;
 
         data += `\t<id>${this.external_vod_id}</id>\n`;
 
@@ -2598,8 +2599,7 @@ export class TwitchVOD extends BaseVOD {
         log(
             LOGLEVEL.SUCCESS,
             "vod.saveJSON",
-            `Saving JSON of ${this.basename} ${
-                reason ? " (" + reason + ")" : ""
+            `Saving JSON of ${this.basename} ${reason ? " (" + reason + ")" : ""
             }`
         );
 
@@ -2619,14 +2619,12 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.FATAL,
                 "vod.saveJSON",
-                `Failed to save JSON of ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save JSON of ${this.basename}: ${(error as Error).message
                 }`
             );
             console.log(
                 chalk.bgRedBright.whiteBright(
-                    `Failed to save JSON of ${this.basename}: ${
-                        (error as Error).message
+                    `Failed to save JSON of ${this.basename}: ${(error as Error).message
                     }`
                 )
             );
@@ -2673,8 +2671,7 @@ export class TwitchVOD extends BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.checkValidVod",
-                    `Failed to match provider vod for ${this.basename}: ${
-                        (error as Error).message
+                    `Failed to match provider vod for ${this.basename}: ${(error as Error).message
                     }`
                 );
                 return null;
@@ -2710,8 +2707,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.checkValidVod",
-                `Failed to check valid VOD for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to check valid VOD for ${this.basename}: ${(error as Error).message
                 }`
             );
             return null;
@@ -2773,8 +2769,7 @@ export class TwitchVOD extends BaseVOD {
         log(
             LOGLEVEL.INFO,
             "vod.checkMutedVod",
-            `Check muted VOD for ${
-                this.basename
+            `Check muted VOD for ${this.basename
             } using ${Config.getInstance().cfg("checkmute_method", "api")}`
         );
 
@@ -2810,8 +2805,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.downloadVod",
-                `VOD ${this.basename} could not be downloaded: ${
-                    (e as Error).message
+                `VOD ${this.basename} could not be downloaded: ${(e as Error).message
                 }`
             );
             return false;
@@ -2899,8 +2893,7 @@ export class TwitchVOD extends BaseVOD {
 
                 if (Config.debug)
                     console.log(
-                        `VOD file ${filename} changed (${
-                            this._writeJSON ? "internal" : "external"
+                        `VOD file ${filename} changed (${this._writeJSON ? "internal" : "external"
                         }/${eventType})!`
                     );
 
@@ -3020,19 +3013,14 @@ export class TwitchVOD extends BaseVOD {
      *
      * @returns Channel
      */
-    public getChannel(): TwitchChannel {
-        if (!this.channel_uuid)
-            throw new Error("No channel UUID set for getChannel");
+    public getChannel(): TwitchChannel | undefined {
+        if (!this.channel_uuid) return undefined;
         // return TwitchChannel.getChannelByLogin(this.streamer_login);
         const channel =
             LiveStreamDVR.getInstance().getChannelByUUID<TwitchChannel>(
                 this.channel_uuid
             );
-        if (!channel)
-            throw new Error(
-                `No channel found for getChannel (uuid: ${this.channel_uuid})`
-            );
-        return channel;
+        return channel || undefined;
     }
 
     public async downloadChat(method: "td" | "tcd" = "td"): Promise<boolean> {
@@ -3120,8 +3108,7 @@ export class TwitchVOD extends BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.setupStreamNumber",
-                `Error getting channel for setupStreamNumber: ${
-                    (error as Error).message
+                `Error getting channel for setupStreamNumber: ${(error as Error).message
                 }`
             );
         }
@@ -3179,7 +3166,7 @@ export class TwitchVOD extends BaseVOD {
             return;
         }
         const streams = await TwitchChannel.getStreams(
-            this.getChannel().internalId
+            this.getChannel()?.internalId || "unknown",
         );
         if (!streams || streams.length == 0) {
             return;

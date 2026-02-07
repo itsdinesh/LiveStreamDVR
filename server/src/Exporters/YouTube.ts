@@ -188,8 +188,7 @@ export class YouTubeExporter extends BaseExporter {
                         log(
                             LOGLEVEL.ERROR,
                             "YouTubeExporter.export",
-                            `Could not add video to playlist: ${
-                                (error as Error).message
+                            `Could not add video to playlist: ${(error as Error).message
                             }`,
                             error
                         );
@@ -403,8 +402,10 @@ export class YouTubeExporter extends BaseExporter {
                 };
             });
 
+            const channel = this.vod?.getChannel();
+
             const playlistEntry = playlistEntries.find(
-                (entry) => entry.channel == this.vod?.getChannel().internalName
+                (entry) => entry.channel == channel?.internalName
             );
 
             if (playlistEntry) {
@@ -413,7 +414,7 @@ export class YouTubeExporter extends BaseExporter {
                 log(
                     LOGLEVEL.ERROR,
                     "YouTubeExporter.getAutomaticPlaylistId",
-                    `No playlist configured for channel ${this.vod?.getChannel().internalName}`
+                    `No playlist configured for channel ${channel?.internalName}`
                 );
                 return "";
             }

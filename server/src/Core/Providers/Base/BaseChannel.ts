@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import readdirSyncRecursive from "fs-readdir-recursive";
 import fs, { readdirSync } from "node:fs";
 import path from "node:path";
+import { formatBytes } from "../../../Helpers/Format";
 import { xClearTimeout, xTimeout } from "../../../Helpers/Timeout";
 import { videoThumbnail, videometadata } from "../../../Helpers/Video";
 import type { BaseVODChapterJSON } from "../../../Storage/JSON";
@@ -26,7 +27,7 @@ import { KeyValue } from "../../KeyValue";
 import { LiveStreamDVR } from "../../LiveStreamDVR";
 import { LOGLEVEL, log } from "../../Log";
 import { Webhook } from "../../Webhook";
-import type { BaseVOD } from "./BaseVOD";
+import { BaseVOD } from "./BaseVOD";
 import type { BaseVODChapter } from "./BaseVODChapter";
 
 export class BaseChannel {
@@ -112,7 +113,7 @@ export class BaseChannel {
     }
 
     public get channelLogoExists(): boolean {
-        throw new Error("Method not implemented.");
+        return false;
     }
 
     /**
@@ -183,7 +184,7 @@ export class BaseChannel {
     }
 
     public async startWatching(): Promise<boolean> {
-        return await Promise.reject(new Error("Method not implemented."));
+        return false;
     }
 
     public async stopWatching() {
@@ -193,7 +194,7 @@ export class BaseChannel {
     }
 
     public checkStaleVodsInMemory() {
-        throw new Error("Method not implemented.");
+        // throw new Error("Method not implemented.");
     }
 
     /**
@@ -284,6 +285,13 @@ export class BaseChannel {
             max_vods: this.max_vods,
             download_vod_at_end: this.download_vod_at_end,
             download_vod_at_end_quality: this.download_vod_at_end_quality,
+            schedule_enabled: this.config?.schedule_enabled,
+            check_interval: this.config?.check_interval,
+            check_interval_unit: this.config?.check_interval_unit,
+            max_check_duration: this.config?.max_check_duration,
+            max_check_duration_unit: this.config?.max_check_duration_unit,
+
+            // icon_url: this.config?.icon_url, // BaseChannelConfig doesn't have icon_url
             vods_list: vodsList || [],
             vods_raw: this.vods_raw,
             vods_size: this.vods_size || 0,
@@ -304,7 +312,7 @@ export class BaseChannel {
     }
 
     public getChapterData(): BaseVODChapterJSON | undefined {
-        throw new Error("Method not implemented.");
+        return undefined;
     }
 
     public async createVOD(
@@ -314,8 +322,134 @@ export class BaseChannel {
         return await Promise.reject(new Error("Method not implemented."));
     }
 
+    public roundupCleanupVodCandidates(ignore_uuid = ""): BaseVOD[] {
+        let totalSize = 0;
+        let totalVods = 0;
+
+        const vodCandidates: BaseVOD[] = [];
+
+        const maxStorage =
+            this.max_storage > 0
+                ? this.max_storage
+                : Config.getInstance().cfg<number>("storage_per_streamer", 100);
+        const maxVods =
+            this.max_vods > 0
+                ? this.max_vods
+                : Config.getInstance().cfg<number>("vods_to_keep", 5);
+
+        const maxBytes = maxStorage * 1024 * 1024 * 1024;
+
+        if (this.vods_list) {
+            for (const vodclass of [...this.vods_list].reverse()) {
+                // reverse so we can delete the oldest ones first
+
+                if (!vodclass.is_finalized) {
+                    continue;
+                }
+
+                if (!vodclass.uuid) {
+                    continue;
+                }
+
+                if (vodclass.uuid === ignore_uuid) {
+                    continue;
+                }
+
+                if (vodclass.prevent_deletion) {
+                    continue;
+                }
+
+                totalSize += vodclass.total_size;
+                totalVods += 1;
+
+                if (totalSize > maxBytes) {
+                    log(
+                        LOGLEVEL.DEBUG,
+                        "channel.roundupCleanupVodCandidates",
+                        `Adding ${vodclass.basename
+                        } to vod_candidates due to storage limit (${formatBytes(
+                            vodclass.total_size
+                        )} of current total ${formatBytes(
+                            totalSize
+                        )}, limit ${formatBytes(maxBytes)})`
+                    );
+                    vodCandidates.push(vodclass);
+                } else if (totalVods > maxVods) {
+                    log(
+                        LOGLEVEL.DEBUG,
+                        "channel.roundupCleanupVodCandidates",
+                        `Adding ${vodclass.basename} to vod_candidates due to vod limit (${totalVods} of limit ${maxVods})`
+                    );
+                    vodCandidates.push(vodclass);
+                }
+            }
+        }
+
+        // remove duplicates
+        const vodCandidatesUnique = vodCandidates.filter(
+            (v, i, a) => a.findIndex((t) => t.basename === v.basename) === i
+        );
+
+        return vodCandidatesUnique;
+    }
+
     public async cleanupVods(ignore_uuid = ""): Promise<number | false> {
-        return await Promise.reject(new Error("Method not implemented."));
+        if (this.no_cleanup) {
+            log(
+                LOGLEVEL.INFO,
+                "channel.cleanupVods",
+                `Skipping cleanup for ${this.internalName} due to no_cleanup flag`
+            );
+            return false;
+        }
+
+        log(
+            LOGLEVEL.INFO,
+            "channel.cleanupVods",
+            `Cleanup VODs for ${this.internalName}, ignore ${ignore_uuid}`
+        );
+
+        const vodCandidates = this.roundupCleanupVodCandidates(ignore_uuid);
+
+        if (vodCandidates.length === 0) {
+            log(
+                LOGLEVEL.INFO,
+                "channel.cleanupVods",
+                `Not enough vods to delete for ${this.internalName}`
+            );
+            return false;
+        }
+
+        for (const vodclass of vodCandidates) {
+            log(
+                LOGLEVEL.INFO,
+                "channel.cleanupVods",
+                `Cleanup delete: ${vodclass.basename}`
+            );
+            try {
+                await vodclass.delete();
+            } catch (error) {
+                log(
+                    LOGLEVEL.ERROR,
+                    "channel.cleanupVods",
+                    `Failed to delete ${vodclass.basename} for ${this.internalName
+                    }: ${(error as Error).message}`
+                );
+            }
+        }
+
+        try {
+            this.deleteEmptyVodFolders();
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "channel.cleanupVods",
+                `Failed to delete empty folders for ${this.internalName}: ${(error as Error).message
+                }`
+            );
+        }
+
+        return vodCandidates.length;
     }
 
     public incrementStreamNumber(): {
@@ -395,7 +529,7 @@ export class BaseChannel {
     }
 
     public async downloadLatestVod(quality: VideoQuality): Promise<string> {
-        return await Promise.reject(new Error("Method not implemented."));
+        return "";
     }
 
     public sortVods() {
@@ -423,15 +557,15 @@ export class BaseChannel {
         }
 
         let deletedVods = 0;
-        for (const vod of this.getVods()) {
+        const vods = [...this.getVods()];
+        for (const vod of vods) {
             try {
                 await vod.delete();
             } catch (error) {
                 log(
                     LOGLEVEL.ERROR,
                     "channel.deleteAllVods",
-                    `Failed to delete vod ${vod.basename}: ${
-                        (error as Error).message
+                    `Failed to delete vod ${vod.basename}: ${(error as Error).message
                     }`
                 );
                 continue;
@@ -529,7 +663,7 @@ export class BaseChannel {
         );
         const configIndex =
             LiveStreamDVR.getInstance().channels_config.findIndex(
-                (ch) => ch.provider == "twitch" && ch.uuid === uuid
+                (ch) => ch.uuid === uuid
             );
         if (configIndex !== -1) {
             LiveStreamDVR.getInstance().channels_config.splice(configIndex, 1);
@@ -561,9 +695,9 @@ export class BaseChannel {
         );
         const clipsDownloaderFiles = fs.existsSync(clipsDownloaderFolder)
             ? fs
-                  .readdirSync(clipsDownloaderFolder)
-                  .filter((f) => f.endsWith(".mp4"))
-                  .map((f) => path.join(clipsDownloaderFolder, f))
+                .readdirSync(clipsDownloaderFolder)
+                .filter((f) => f.endsWith(".mp4"))
+                .map((f) => path.join(clipsDownloaderFolder, f))
             : [];
 
         const clipsSchedulerFolder = path.join(
@@ -573,9 +707,9 @@ export class BaseChannel {
         );
         const clipsSchedulerFiles = fs.existsSync(clipsSchedulerFolder)
             ? fs
-                  .readdirSync(clipsSchedulerFolder)
-                  .filter((f) => f.endsWith(".mp4"))
-                  .map((f) => path.join(clipsSchedulerFolder, f))
+                .readdirSync(clipsSchedulerFolder)
+                .filter((f) => f.endsWith(".mp4"))
+                .map((f) => path.join(clipsSchedulerFolder, f))
             : [];
 
         const clipsEditorFolder = path.join(
@@ -585,9 +719,9 @@ export class BaseChannel {
         );
         const clipsEditorFiles = fs.existsSync(clipsEditorFolder)
             ? fs
-                  .readdirSync(clipsEditorFolder)
-                  .filter((f) => f.endsWith(".mp4"))
-                  .map((f) => path.join(clipsEditorFolder, f))
+                .readdirSync(clipsEditorFolder)
+                .filter((f) => f.endsWith(".mp4"))
+                .map((f) => path.join(clipsEditorFolder, f))
             : [];
 
         const allClips = clipsDownloaderFiles
@@ -603,8 +737,7 @@ export class BaseChannel {
                 log(
                     LOGLEVEL.ERROR,
                     "channel.findClips",
-                    `Failed to get video metadata for clip ${clipPath}: ${
-                        (error as Error).message
+                    `Failed to get video metadata for clip ${clipPath}: ${(error as Error).message
                     }`
                 );
                 continue;
@@ -619,8 +752,7 @@ export class BaseChannel {
                 log(
                     LOGLEVEL.ERROR,
                     "channel.findClips",
-                    `Failed to generate thumbnail for ${clipPath}: ${
-                        (error as Error).message
+                    `Failed to generate thumbnail for ${clipPath}: ${(error as Error).message
                     }`,
                     error
                 );
@@ -639,8 +771,7 @@ export class BaseChannel {
                     log(
                         LOGLEVEL.ERROR,
                         "channel.findClips",
-                        `Failed to read clip metadata for ${clipPath}: ${
-                            (error as Error).message
+                        `Failed to read clip metadata for ${clipPath}: ${(error as Error).message
                         }`
                     );
                 }
@@ -737,8 +868,9 @@ export class BaseChannel {
                 !file.endsWith(".metadata.json") &&
                 !file.endsWith(".chat.json") &&
                 fs.statSync(path.join(this.getFolder(), file)).size <
-                    1024 * 1024
+                1024 * 1024
         );
+        log(LOGLEVEL.INFO, "channel.rescanVods", `Scan for ${this.internalName} in ${this.getFolder()} found ${list.length} files`);
         return list.map((p) =>
             path.relative(
                 BaseConfigDataFolder.vod,
@@ -748,15 +880,24 @@ export class BaseChannel {
     }
 
     public addVod(vod: BaseVOD): void {
+        if (this.vods_list.includes(vod)) return;
         this.vods_list.push(vod);
+        try {
+            BaseVOD.addVod(vod);
+        } catch (e) {
+            // log(LOGLEVEL.DEBUG, "channel.addVod", `VOD ${vod.basename} already in global cache`);
+        }
     }
 
     public makeFolder() {
+        log(LOGLEVEL.DEBUG, "channel.makeFolder", `Checking folder for ${this.internalName}: ${this.getFolder()} (folders enabled: ${Config.getInstance().cfg("channel_folders")})`);
         if (
             Config.getInstance().cfg("channel_folders") &&
+            this.internalName !== "" &&
             !fs.existsSync(this.getFolder())
         ) {
-            fs.mkdirSync(this.getFolder());
+            log(LOGLEVEL.INFO, "channel.makeFolder", `Creating folder for ${this.internalName}: ${this.getFolder()}`);
+            fs.mkdirSync(this.getFolder(), { recursive: true });
         }
     }
 
@@ -879,8 +1020,7 @@ export class BaseChannel {
                 log(
                     LOGLEVEL.ERROR,
                     "route.channel.ExportAllVods",
-                    `Auto exporter error for '${vod.basename}': ${
-                        (error as Error).message
+                    `Auto exporter error for '${vod.basename}': ${(error as Error).message
                     }`
                 );
                 failedVods++;
@@ -897,8 +1037,7 @@ export class BaseChannel {
                     log(
                         LOGLEVEL.ERROR,
                         "route.channel.ExportAllVods",
-                        `Auto exporter error for '${vod.basename}': ${
-                            (error as Error).message
+                        `Auto exporter error for '${vod.basename}': ${(error as Error).message
                         }`
                     );
                     failedVods++;
@@ -920,9 +1059,8 @@ export class BaseChannel {
                         LOGLEVEL.ERROR,
                         "route.channel.ExportAllVods",
                         (error as Error).message
-                            ? `Export error for '${vod.basename}': ${
-                                  (error as Error).message
-                              }`
+                            ? `Export error for '${vod.basename}': ${(error as Error).message
+                            }`
                             : "Unknown error occurred while exporting export"
                     );
                     failedVods++;
@@ -950,9 +1088,8 @@ export class BaseChannel {
                             LOGLEVEL.ERROR,
                             "route.channel.ExportAllVods",
                             (error as Error).message
-                                ? `Verify error for '${vod.basename}': ${
-                                      (error as Error).message
-                                  }`
+                                ? `Verify error for '${vod.basename}': ${(error as Error).message
+                                }`
                                 : "Unknown error occurred while verifying export"
                         );
                         failedVods++;

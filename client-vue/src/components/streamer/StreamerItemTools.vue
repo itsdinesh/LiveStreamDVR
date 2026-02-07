@@ -11,8 +11,13 @@
         </button>
 
         <!-- force recording -->
-        <button v-else class="icon-button white" :title="t('streamer.tools.force-record')" @click="forceRecord">
+        <button v-else-if="streamer.provider == 'streamlink' || streamer.provider == 'rtsp'" class="icon-button white" :title="t('streamer.tools.force-record')" @click="forceRecord">
             <span class="icon"><font-awesome-icon icon="video" /></span>
+        </button>
+
+        <!-- schedule -->
+        <button v-if="streamer.provider == 'streamlink' || streamer.provider == 'rtsp'" class="icon-button white" :class="{ 'is-active': streamer.schedule_enabled }" :title="t('streamer.tools.configure-schedule')" @click="showScheduleModal = true">
+            <span class="icon"><font-awesome-icon icon="clock" /></span>
         </button>
 
         <!-- dump playlist -->
@@ -108,21 +113,26 @@
             </template>
         </ContextMenu>
     </span>
+    <modal-box :show="showScheduleModal" title="Schedule Settings" :cancel-on-overlay-click="false" @close="showScheduleModal = false">
+        <ScheduleConfigModal :streamer="streamer" @close="showScheduleModal = false" />
+    </modal-box>
 </template>
 
 <script lang="ts" setup>
 import ContextMenu from "@/components/reusables/ContextMenu.vue";
+import ModalBox from "@/components/ModalBox.vue";
+import ScheduleConfigModal from "./ScheduleConfigModal.vue";
 import { useStore } from "@/store";
 import type { ApiResponse } from "@common/Api/Api";
 import axios from "axios";
 import { computed, ref } from "vue";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faUpload, faEllipsisH } from "@fortawesome/free-solid-svg-icons";
+import { faUpload, faEllipsisH, faClock } from "@fortawesome/free-solid-svg-icons";
 import { formatBytes } from "@/mixins/newhelpers";
 import { useI18n } from "vue-i18n";
 import type { ChannelTypes, VODTypes } from "@/twitchautomator";
-library.add(faUpload, faEllipsisH);
+library.add(faUpload, faEllipsisH, faClock);
 
 const props = defineProps<{
     streamer: ChannelTypes;
@@ -140,6 +150,7 @@ const { t } = useI18n();
 
 const showMoreMenu = ref(false);
 const moreMenu = ref<HTMLElement | null>(null);
+const showScheduleModal = ref(false);
 
 const canAbortCapture = computed(() => {
     if (!props.streamer) return false;
@@ -190,7 +201,8 @@ async function abortCapture() {
 
     const data = response.data;
 
-    if (data.message) {
+    // Don't show alert for Streamlink/RTSP providers - UI already shows the status
+    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp') {
         alert(data.message);
     }
 
@@ -217,7 +229,8 @@ async function forceRecord() {
 
     const data = response.data;
 
-    if (data.message) {
+    // Don't show alert for Streamlink/RTSP providers - UI already shows the status
+    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp') {
         alert(data.message);
     }
 

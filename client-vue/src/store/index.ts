@@ -2,6 +2,8 @@ import TwitchChannel from "@/core/Providers/Twitch/TwitchChannel";
 import TwitchVOD from "@/core/Providers/Twitch/TwitchVOD";
 import YouTubeChannel from "@/core/Providers/YouTube/YouTubeChannel";
 import YouTubeVOD from "@/core/Providers/YouTube/YouTubeVOD";
+import RTSPChannel from "@/core/Providers/RTSP/RTSPChannel";
+import StreamlinkChannel from "@/core/Providers/Streamlink/StreamlinkChannel";
 import { defaultSidemenuShow, defaultVideoBlockShow } from "@/defs";
 import type { ChannelTypes, SidemenuShow, VODTypes, VideoBlockShow } from "@/twitchautomator";
 import type {
@@ -23,7 +25,7 @@ import axios from "axios";
 import { parseJSON } from "date-fns";
 import { defineStore } from "pinia";
 import type { WinstonLogLine } from "@common/Log";
-import { isTwitchChannel, isTwitchApiChannel, isYouTubeApiChannel, isTwitchApiVOD, isYouTubeVOD, isYouTubeChannel, isYouTubeApiVOD } from "@/mixins/newhelpers";
+import { isTwitchChannel, isTwitchApiChannel, isYouTubeApiChannel, isTwitchApiVOD, isYouTubeVOD, isYouTubeChannel, isYouTubeApiVOD, isRTSPApiChannel, isStreamlinkApiChannel, isRTSPChannel, isStreamlinkChannel } from "@/mixins/newhelpers";
 
 interface StoreType {
     app_name: string;
@@ -154,17 +156,21 @@ export const useStore = defineStore("twitchAutomator", {
                             return TwitchChannel.makeFromApiResponse(channel);
                         } else if (isYouTubeApiChannel(channel)) {
                             return YouTubeChannel.makeFromApiResponse(channel);
+                        } else if (isRTSPApiChannel(channel)) {
+                            return RTSPChannel.makeFromApiResponse(channel);
+                        } else if (isStreamlinkApiChannel(channel)) {
+                            return StreamlinkChannel.makeFromApiResponse(channel);
                         }
                     })
-                    .filter((c) => c !== undefined);
+                    .filter((c): c is ChannelTypes => c !== undefined);
 
                 if (!channels) {
                     console.error("No channels found");
                     return;
                 }
 
-                // this.streamerList = channels;
-                Object.assign(this.streamerList, channels);
+                this.streamerList = channels;
+                // Object.assign(this.streamerList, channels);
 
                 this.streamerListLoaded = true;
                 this.diskFreeSize = data.free_size;
@@ -175,7 +181,7 @@ export const useStore = defineStore("twitchAutomator", {
             this.loading = true;
             let response;
             try {
-                response = await axios.get<ApiChannelsResponse | ApiErrorResponse>("/api/v0/channels");
+                response = await axios.get<ApiChannelsResponse | ApiErrorResponse>(`/api/v0/channels?t=${Date.now()}`);
             } catch (error) {
                 console.error(error);
                 this.loading = false;
@@ -219,12 +225,12 @@ export const useStore = defineStore("twitchAutomator", {
             if (!vod_data) return false;
 
             // check if streamer is already in the list
-            if (isTwitchApiVOD(vod_data)){
+            if (isTwitchApiVOD(vod_data)) {
                 const index = this.streamerList.findIndex((s) => isTwitchChannel(s) && s.uuid === vod_data.uuid);
                 if (index === -1) return false;
                 const vod = TwitchVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
-            } else if (isYouTubeApiVOD(vod_data)){
+            } else if (isYouTubeApiVOD(vod_data)) {
                 const index = this.streamerList.findIndex((s) => isYouTubeChannel(s) && s.uuid === vod_data.uuid);
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
@@ -263,12 +269,12 @@ export const useStore = defineStore("twitchAutomator", {
             // const vod = TwitchVOD.makeFromApiResponse(vod_data);
             // return this.updateVod(vod);
 
-            if (isTwitchApiVOD(vod_data)){
+            if (isTwitchApiVOD(vod_data)) {
                 const index = this.streamerList.findIndex((channel) => channel instanceof TwitchChannel && channel.uuid === vod_data.channel_uuid);
                 if (index === -1) return false;
                 const vod = TwitchVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
-            } else if (isYouTubeApiVOD(vod_data)){
+            } else if (isYouTubeApiVOD(vod_data)) {
                 const index = this.streamerList.findIndex((channel) => channel instanceof YouTubeChannel && channel.uuid === vod_data.channel_uuid);
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
@@ -347,6 +353,16 @@ export const useStore = defineStore("twitchAutomator", {
                 if (index === -1) return false;
                 const streamer = YouTubeChannel.makeFromApiResponse(streamer_data);
                 return this.updateStreamer(streamer);
+            } else if (streamer_data.provider == "rtsp") {
+                const index = this.streamerList.findIndex((channel) => channel instanceof RTSPChannel && channel.uuid === streamer_data.uuid);
+                if (index === -1) return false;
+                const streamer = RTSPChannel.makeFromApiResponse(streamer_data);
+                return this.updateStreamer(streamer);
+            } else if (streamer_data.provider == "streamlink") {
+                const index = this.streamerList.findIndex((channel) => channel instanceof StreamlinkChannel && channel.uuid === streamer_data.uuid);
+                if (index === -1) return false;
+                const streamer = StreamlinkChannel.makeFromApiResponse(streamer_data);
+                return this.updateStreamer(streamer);
             }
             return false;
         },
@@ -369,6 +385,10 @@ export const useStore = defineStore("twitchAutomator", {
                 streamer = YouTubeChannel.makeFromApiResponse(streamer_data);
             } else if (isTwitchApiChannel(streamer_data)) {
                 streamer = TwitchChannel.makeFromApiResponse(streamer_data);
+            } else if (isRTSPApiChannel(streamer_data)) {
+                streamer = RTSPChannel.makeFromApiResponse(streamer_data);
+            } else if (isStreamlinkApiChannel(streamer_data)) {
+                streamer = StreamlinkChannel.makeFromApiResponse(streamer_data);
             } else {
                 console.error("updateStreamerFromData", streamer_data);
                 return false;
@@ -385,6 +405,10 @@ export const useStore = defineStore("twitchAutomator", {
                     return YouTubeChannel.makeFromApiResponse(channel);
                 } else if (channel.provider == "twitch") {
                     return TwitchChannel.makeFromApiResponse(channel);
+                } else if (channel.provider == "rtsp") {
+                    return RTSPChannel.makeFromApiResponse(channel);
+                } else if (channel.provider == "streamlink") {
+                    return StreamlinkChannel.makeFromApiResponse(channel);
                 }
                 throw new Error(`Unknown provider ${channel}`);
             });

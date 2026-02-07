@@ -1,9 +1,12 @@
 import type { TwitchVODChapter } from "./core/Providers/Twitch/TwitchVODChapter";
 import type { BaseVODChapter } from "./core/Providers/Base/BaseVODChapter";
+import type BaseVOD from "./core/Providers/Base/BaseVOD";
 import type TwitchVOD from "./core/Providers/Twitch/TwitchVOD";
 import type YouTubeVOD from "./core/Providers/YouTube/YouTubeVOD";
 import type TwitchChannel from "./core/Providers/Twitch/TwitchChannel";
 import type YouTubeChannel from "./core/Providers/YouTube/YouTubeChannel";
+import type RTSPChannel from "./core/Providers/RTSP/RTSPChannel";
+import type StreamlinkChannel from "./core/Providers/Streamlink/StreamlinkChannel";
 
 export type PHPDateTimeJSON = {
     date: string;
@@ -34,6 +37,6 @@ export type FormStatus = "IDLE" | "LOADING" | "ERROR" | "OK";
 
 // export const phpDateFormat = "yyyy-MM-dd HH:mm:ss.SSSSSS"; // 2020-11-03 02:48:01.000000
 
-export type ChannelTypes = TwitchChannel | YouTubeChannel;
-export type VODTypes = TwitchVOD | YouTubeVOD;
+export type ChannelTypes = TwitchChannel | YouTubeChannel | RTSPChannel | StreamlinkChannel;
+export type VODTypes = TwitchVOD | YouTubeVOD | BaseVOD;
 export type ChapterTypes = TwitchVODChapter | BaseVODChapter;

@@ -483,13 +483,13 @@ export class BaseAutomator {
                     this.channel.latest_vod &&
                     this.channel.latest_vod.started_at
                     ? t(
-                          "notify.was-streaming-for-formatdistancetonow-this-channel-latest_vod-started_at",
-                          [
-                              formatDistanceToNow(
-                                  this.channel.latest_vod.started_at
-                              ),
-                          ]
-                      ).toString()
+                        "notify.was-streaming-for-formatdistancetonow-this-channel-latest_vod-started_at",
+                        [
+                            formatDistanceToNow(
+                                this.channel.latest_vod.started_at
+                            ),
+                        ]
+                    ).toString()
                     : "",
                 this.channel.profilePictureUrl,
                 "streamOffline",
@@ -528,8 +528,7 @@ export class BaseAutomator {
                 log(
                     LOGLEVEL.ERROR,
                     "automator.end",
-                    `Error downloading VOD at end: ${this.vodBasenameTemplate()} (${
-                        (err as Error).message
+                    `Error downloading VOD at end: ${this.vodBasenameTemplate()} (${(err as Error).message
                     })`,
                     err
                 );
@@ -562,8 +561,7 @@ export class BaseAutomator {
             log(
                 LOGLEVEL.ERROR,
                 "automator.onEndDownload",
-                `Failed to download chat for ${this.vod?.basename}: ${
-                    (error as Error).message
+                `Failed to download chat for ${this.vod?.basename}: ${(error as Error).message
                 }`
             );
         }
@@ -650,9 +648,8 @@ export class BaseAutomator {
                                         LOGLEVEL.ERROR,
                                         "automator.onEndDownload",
                                         (error as Error).message
-                                            ? `Verify error: ${
-                                                  (error as Error).message
-                                              }`
+                                            ? `Verify error: ${(error as Error).message
+                                            }`
                                             : "Unknown error occurred while verifying export"
                                     );
                                 });
@@ -693,8 +690,7 @@ export class BaseAutomator {
                 log(
                     LOGLEVEL.ERROR,
                     "automator.onEndDownload",
-                    `Failed to reencode ${this.vod?.basename}: ${
-                        (error as Error).message
+                    `Failed to reencode ${this.vod?.basename}: ${(error as Error).message
                     }`
                 );
             }
@@ -752,8 +748,7 @@ export class BaseAutomator {
                     log(
                         LOGLEVEL.ERROR,
                         "automator.onEndDownload",
-                        `Failed to split ${this.vod.basename}: ${
-                            (error as Error).message
+                        `Failed to split ${this.vod.basename}: ${(error as Error).message
                         }`
                     );
                 }
@@ -844,8 +839,7 @@ export class BaseAutomator {
                     log(
                         LOGLEVEL.ERROR,
                         "automator.download",
-                        `Fallback capture failed for ${this.getLogin()}: ${
-                            (error as Error).message
+                        `Fallback capture failed for ${this.getLogin()}: ${(error as Error).message
                         }`
                     );
                     console.error(error);
@@ -918,8 +912,7 @@ export class BaseAutomator {
                     log(
                         LOGLEVEL.ERROR,
                         "automator.download",
-                        `Fallback capture failed for ${this.getLogin()}: ${
-                            (error as Error).message
+                        `Fallback capture failed for ${this.getLogin()}: ${(error as Error).message
                         }`
                     );
                     console.error(error);
@@ -937,8 +930,7 @@ export class BaseAutomator {
             log(
                 LOGLEVEL.ERROR,
                 "automator.download",
-                `Failed to create vod for ${basename}: ${
-                    (error as Error).message
+                `Failed to create vod for ${basename}: ${(error as Error).message
                 }`
             );
             return false;
@@ -1130,8 +1122,7 @@ export class BaseAutomator {
                     log(
                         LOGLEVEL.ERROR,
                         "automator.download",
-                        `Fallback capture failed for ${this.getLogin()}: ${
-                            (error as Error).message
+                        `Fallback capture failed for ${this.getLogin()}: ${(error as Error).message
                         }`
                     );
                     console.error(error);
@@ -1513,7 +1504,7 @@ export class BaseAutomator {
                     const duration = Math.round(
                         (this.stream_pause.end.getTime() -
                             this.stream_pause.start.getTime()) /
-                            1000
+                        1000
                     );
                     log(
                         LOGLEVEL.INFO,
@@ -1553,8 +1544,7 @@ export class BaseAutomator {
                         log(
                             LOGLEVEL.ERROR,
                             "automator.captureTicker",
-                            `Fallback capture failed for ${this.getLogin()}: ${
-                                (error as Error).message
+                            `Fallback capture failed for ${this.getLogin()}: ${(error as Error).message
                             }`
                         );
                         console.error(error);
@@ -1789,17 +1779,16 @@ export class BaseAutomator {
                         log(
                             LOGLEVEL.ERROR,
                             "automator.captureVideo",
-                            `Failed to get size of ${this.capture_filename}: ${
-                                (error as Error).message
+                            `Failed to get size of ${this.capture_filename}: ${(error as Error).message
                             }`
                         );
                         return;
                     }
                     progressOutput(
                         `⏸ ${basename} ${this.stream_resolution} ` +
-                            `${formatBytes(size)} / ${Math.round(
-                                (0 * 8) / 1000
-                            )} kbps`
+                        `${formatBytes(size)} / ${Math.round(
+                            (0 * 8) / 1000
+                        )} kbps`
                     );
                 } else if (fs.existsSync(this.capture_filename)) {
                     const size = fs.statSync(this.capture_filename).size;
@@ -1807,9 +1796,9 @@ export class BaseAutomator {
                     lastSize = size;
                     progressOutput(
                         `🎥 ${basename} ${this.stream_resolution} ` +
-                            `${formatBytes(size)} / ${Math.round(
-                                (bitRate * 8) / 1000
-                            )} kbps`
+                        `${formatBytes(size)} / ${Math.round(
+                            (bitRate * 8) / 1000
+                        )} kbps`
                     );
                 } else {
                     console.log(
@@ -1914,14 +1903,14 @@ export class BaseAutomator {
 
         const chatHeight: number =
             this.vod.video_metadata &&
-            this.vod.video_metadata.type !== "audio" &&
-            Config.getInstance().cfg<boolean>(
-                "chatburn.default.auto_chat_height"
-            )
+                this.vod.video_metadata.type !== "audio" &&
+                Config.getInstance().cfg<boolean>(
+                    "chatburn.default.auto_chat_height"
+                )
                 ? this.vod.video_metadata.height
                 : Config.getInstance().cfg<number>(
-                      "chatburn.default.chat_height"
-                  );
+                    "chatburn.default.chat_height"
+                );
         const settings = {
             vodSource: "captured",
             chatSource: "captured",
@@ -2085,12 +2074,11 @@ export class BaseAutomator {
                     lastSize = size;
                     console.log(
                         chalk.bgGreen.whiteBright(
-                            `🎥 ${new Date().toISOString()} ${basename} ${
-                                this.stream_resolution
+                            `🎥 ${new Date().toISOString()} ${basename} ${this.stream_resolution
                             } ` +
-                                `${formatBytes(size)} / ${Math.round(
-                                    (bitRate * 8) / 1000
-                                )} kbps`
+                            `${formatBytes(size)} / ${Math.round(
+                                (bitRate * 8) / 1000
+                            )} kbps`
                         )
                     );
                 } else {
@@ -2252,7 +2240,7 @@ export class BaseAutomator {
         return false;
     }
 
-    private async convertVideo(): Promise<boolean> {
+    protected async convertVideo(): Promise<boolean> {
         if (!this.vod) throw new Error("VOD not set");
 
         Webhook.dispatchAll("start_convert", {

@@ -146,6 +146,21 @@ export interface BaseChannelConfig {
 
     /** The username or login of the channel. Some providers use this instead of the internal ID. */
     internalName: string;
+
+    /** URL for generic providers */
+    url?: string;
+
+    /** Monitoring interval in minutes */
+    check_interval?: number;
+    check_interval_unit?: "seconds" | "minutes" | "hours";
+
+    /** Max time to keep checking in hours */
+    max_check_duration?: number;
+    max_check_duration_unit?: "seconds" | "minutes" | "hours";
+
+    /** Enable scheduled checking */
+    schedule_enabled?: boolean;
+
     quality: VideoQuality[];
     match: string[];
     download_chat: boolean;
@@ -180,7 +195,19 @@ export interface KickChannelConfig extends BaseChannelConfig {
     slug?: string;
 }
 
+export interface RTSPChannelConfig extends BaseChannelConfig {
+    provider: "rtsp";
+    icon_url?: string;
+}
+
+export interface StreamlinkChannelConfig extends BaseChannelConfig {
+    provider: "streamlink";
+    icon_url?: string;
+}
+
 export type ChannelConfig =
     | TwitchChannelConfig
     | YouTubeChannelConfig
-    | KickChannelConfig;
+    | KickChannelConfig
+    | RTSPChannelConfig
+    | StreamlinkChannelConfig;

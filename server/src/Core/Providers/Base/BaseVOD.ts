@@ -430,8 +430,7 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.DEBUG,
                     "vod.watch",
-                    `VOD file ${filename} on ${this.basename} changed (${
-                        this._writeJSON ? "internal" : "external"
+                    `VOD file ${filename} on ${this.basename} changed (${this._writeJSON ? "internal" : "external"
                     }/${eventType})! RSS ${formatBytes(
                         mem.rss
                     )} Heap ${formatBytes(mem.heapUsed)}`
@@ -515,8 +514,8 @@ export class BaseVOD {
         // console.log(`Stopped watching ${this.basename}`);
     }
 
-    public getChannel(): BaseChannel {
-        throw new Error("getChannel not implemented");
+    public getChannel(): BaseChannel | undefined {
+        return undefined;
     }
 
     public realpath(expanded_path: string): string {
@@ -541,7 +540,9 @@ export class BaseVOD {
             segments: this.segments.map((s) => s.toAPI()),
             segments_raw: this.segments_raw,
 
-            created_at: this.created_at ? this.created_at.toISOString() : "",
+            created_at: (this.created_at || this.started_at)
+                ? (this.created_at || this.started_at)!.toISOString()
+                : "",
             saved_at: this.saved_at ? this.saved_at.toISOString() : "",
             started_at: this.started_at ? this.started_at.toISOString() : "",
             ended_at: this.ended_at ? this.ended_at.toISOString() : undefined,
@@ -1303,8 +1304,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.finalize",
-                `Failed to get mediainfo for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to get mediainfo for ${this.basename}: ${(error as Error).message
                 }`
             );
             console.error(error);
@@ -1317,8 +1317,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.finalize",
-                `Failed to save lossless cut for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save lossless cut for ${this.basename}: ${(error as Error).message
                 }`
             );
             console.error(error);
@@ -1330,8 +1329,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.finalize",
-                `Failed to save ffmpeg chapters for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save ffmpeg chapters for ${this.basename}: ${(error as Error).message
                 }`
             );
             console.error(error);
@@ -1343,8 +1341,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.finalize",
-                `Failed to save vtt chapters for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save vtt chapters for ${this.basename}: ${(error as Error).message
                 }`
             );
             console.error(error);
@@ -1356,8 +1353,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.finalize",
-                `Failed to save kodi nfo for ${this.basename}: ${
-                    (error as Error).message
+                `Failed to save kodi nfo for ${this.basename}: ${(error as Error).message
                 }`
             );
             console.error(error);
@@ -1372,6 +1368,8 @@ export class BaseVOD {
         this.calculateChapters();
 
         await LiveStreamDVR.getInstance().updateFreeStorageDiskSpace();
+
+        this.is_finalized = true;
 
         return true;
     }
@@ -1426,8 +1424,7 @@ export class BaseVOD {
         });
 
         console.debug(
-            `Removed ${
-                this.chapters.length - longChapters.length
+            `Removed ${this.chapters.length - longChapters.length
             } chapters on ${this.basename}`
         );
 
@@ -1505,8 +1502,10 @@ export class BaseVOD {
             `Saving FFMPEG chapters file for ${this.basename} to ${this.path_ffmpegchapters}`
         );
 
+        const channel = this.getChannel();
+
         const meta = new FFmpegMetadata().setArtist(
-            this.getChannel().displayName
+            channel?.displayName || "Unknown"
         );
 
         // if (isTwitchVOD(this)) {
@@ -1555,10 +1554,8 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.saveFFMPEGChapters",
-                    `Error while adding chapter ${
-                        chapter.title
-                    } to FFMPEG chapters file for ${this.basename}: ${
-                        (error as Error).message
+                    `Error while adding chapter ${chapter.title
+                    } to FFMPEG chapters file for ${this.basename}: ${(error as Error).message
                     }`
                 );
             }
@@ -1818,8 +1815,7 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.reencodeSegments",
-                    `Failed to reencode ${this.basename}: ${
-                        (err as Error).message
+                    `Failed to reencode ${this.basename}: ${(err as Error).message
                     }`
                 );
                 return false;
@@ -1891,8 +1887,7 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.setupFiles",
-                    `Could not save associated files for ${this.basename}: ${
-                        (error as Error).message
+                    `Could not save associated files for ${this.basename}: ${(error as Error).message
                     }`
                 );
             }
@@ -2230,8 +2225,7 @@ export class BaseVOD {
             log(
                 LOGLEVEL.ERROR,
                 "vod.getMediainfo",
-                `Could not get video metadata of ${
-                    this.basename
+                `Could not get video metadata of ${this.basename
                 } (${filename} @ ${this.directory}): ${(e as Error).message}`
             );
             return false;
@@ -2298,11 +2292,11 @@ export class BaseVOD {
                     // };
                     return v.start && v.end
                         ? [
-                              {
-                                  start: parseJSON(v.start),
-                                  end: parseJSON(v.end),
-                              },
-                          ]
+                            {
+                                start: parseJSON(v.start),
+                                end: parseJSON(v.end),
+                            },
+                        ]
                         : [];
                 });
         }
@@ -2816,10 +2810,9 @@ export class BaseVOD {
                     )
                 );
 
-                let channel;
-                try {
-                    channel = this.getChannel();
-                } catch (error) {
+                const channel = this.getChannel();
+
+                if (!channel) {
                     console.log(
                         chalk.bgRed.whiteBright(
                             `🛠️ [${source}] ${this.basename} has no channel!`
@@ -2830,8 +2823,8 @@ export class BaseVOD {
                 if (channel) {
                     const containerExt =
                         channel &&
-                        channel.quality &&
-                        channel.quality[0] === "audio_only"
+                            channel.quality &&
+                            channel.quality[0] === "audio_only"
                             ? Config.AudioContainer
                             : Config.getInstance().cfg("vod_container", "mp4");
 
@@ -3077,12 +3070,7 @@ export class BaseVOD {
             {
                 channel_uuid: this.channel_uuid,
                 channel_name:
-                    this.channel_uuid &&
-                    LiveStreamDVR.getInstance().getChannelByUUID(
-                        this.channel_uuid
-                    )
-                        ? this.getChannel().internalName
-                        : "unknown",
+                    this.getChannel()?.internalName || "unknown",
                 uuid: this.uuid,
 
                 basename: this.basename,
@@ -3126,8 +3114,11 @@ export class BaseVOD {
 
         let files: string[];
 
+        const channel = this.getChannel();
+
         if (
-            this.directory !== Helper.vodFolder(this.getChannel().internalName)
+            channel &&
+            this.directory !== Helper.vodFolder(channel.internalName)
         ) {
             // is not in vod folder root, TODO: channel might not be added yet
             log(
@@ -3272,8 +3263,7 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.createVideoContactSheet",
-                    `Failed to create video contact sheet for ${
-                        this.basename
+                    `Failed to create video contact sheet for ${this.basename
                     }: ${error.stdout.join("")} ${error.stderr.join("")}`,
                     error
                 );
@@ -3281,8 +3271,7 @@ export class BaseVOD {
                 log(
                     LOGLEVEL.ERROR,
                     "vod.createVideoContactSheet",
-                    `Failed to create video contact sheet for ${
-                        this.basename
+                    `Failed to create video contact sheet for ${this.basename
                     }: ${(error as Error).message}`,
                     error
                 );
@@ -3293,8 +3282,11 @@ export class BaseVOD {
     }
 
     public deleteEmptyFolder(): boolean {
+        const channel = this.getChannel();
+
         if (
-            this.directory === Helper.vodFolder(this.getChannel().internalName)
+            channel &&
+            this.directory === Helper.vodFolder(channel.internalName)
         ) {
             log(
                 LOGLEVEL.ERROR,

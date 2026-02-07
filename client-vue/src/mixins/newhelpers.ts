@@ -4,7 +4,7 @@ import YouTubeChannel from "@/core/Providers/YouTube/YouTubeChannel";
 import YouTubeVOD from "@/core/Providers/YouTube/YouTubeVOD";
 import type { ChannelTypes, VODTypes } from "@/twitchautomator";
 import { format, formatDistance, parseJSON, isDate } from "date-fns";
-import type { ApiTwitchChannel, ApiYouTubeChannel, ApiTwitchVod, ApiYouTubeVod } from "@common/Api/Client";
+import type { ApiTwitchChannel, ApiYouTubeChannel, ApiTwitchVod, ApiYouTubeVod, ApiRTSPChannel, ApiStreamlinkChannel, ApiRTSPVod, ApiStreamlinkVod } from "@common/Api/Client";
 
 export function niceDuration(durationInSeconds: number): string {
     if (durationInSeconds < 0) {
@@ -126,7 +126,7 @@ export function formatNumberShort(num: number, decimals = 0): string {
         return `${(num / 1000).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}K`;
     } else {
         return `${(num / 1000000).toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}M`;
-    }   
+    }
 }
 
 export function formatTimestamp(timestamp: number, fmt = "yyyy-MM-dd HH:mm:ss"): string {
@@ -158,6 +158,14 @@ export function isYouTubeChannel(vod: ChannelTypes): vod is YouTubeChannel {
     return vod instanceof YouTubeChannel;
 }
 
+export function isRTSPChannel(vod: ChannelTypes): vod is any { // TODO: RTSPChannel
+    return vod.provider == "rtsp";
+}
+
+export function isStreamlinkChannel(vod: ChannelTypes): vod is any { // TODO: StreamlinkChannel
+    return vod.provider == "streamlink";
+}
+
 export function isTwitchApiChannel(vod: any): vod is ApiTwitchChannel {
     return vod.provider == "twitch";
 }
@@ -173,6 +181,16 @@ export function isYouTubeApiVOD(vod: any): vod is ApiYouTubeVod {
 export function isYouTubeApiChannel(vod: any): vod is ApiYouTubeChannel {
     return vod.provider == "youtube";
 }
+
+export function isRTSPApiChannel(vod: any): vod is ApiRTSPChannel {
+    return vod.provider == "rtsp";
+}
+
+export function isStreamlinkApiChannel(vod: any): vod is ApiStreamlinkChannel {
+    return vod.provider == "streamlink";
+}
+
+// TODO: VODs
 
 export function isTwitchVOD(vod: VODTypes): vod is TwitchVOD {
     return vod instanceof TwitchVOD;

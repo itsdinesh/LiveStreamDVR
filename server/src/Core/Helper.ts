@@ -150,8 +150,7 @@ export class Helper {
             log(
                 LOGLEVEL.ERROR,
                 "helper.get_pip_package_distinfo",
-                `Failed to get pip package info for ${package_name}: ${
-                    (error as ExecReturn).stderr
+                `Failed to get pip package info for ${package_name}: ${(error as ExecReturn).stderr
                 }`,
                 error
             );
@@ -276,7 +275,7 @@ export class Helper {
     public static path_ffprobe(): string | false {
         const f = this.path_ffmpeg();
         if (!f) return false;
-        return f.replace("ffmpeg.exe", "ffprobe.exe");
+        return path.join(path.dirname(f), path.basename(f).replace("ffmpeg", "ffprobe"));
     }
 
     public static python_scripts_dir_name(): string {
@@ -418,5 +417,18 @@ export class Helper {
         }
 
         return exists ? full_path : false;
+    }
+    public static timeToMilliseconds(time: number, unit: string): number {
+        switch (unit) {
+            case "seconds":
+                return time * 1000;
+            case "minutes":
+                return time * 60 * 1000;
+            case "hours":
+                return time * 60 * 60 * 1000;
+            default:
+                log(LOGLEVEL.ERROR, "helper.timeToMilliseconds", `Invalid time unit: ${unit}`);
+                return time;
+        }
     }
 }

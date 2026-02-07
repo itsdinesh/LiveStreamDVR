@@ -219,10 +219,10 @@
                     </li>
                     <li>
                         <strong>{{ t("vod.video-info.is-muted") }}:</strong>
-                        <span v-if="vod.twitch_vod_muted === MuteStatus.MUTED" class="px-1"
+                        <span v-if="(vod as any).twitch_vod_muted === MuteStatus.MUTED" class="px-1"
                             ><strong class="text-is-error">{{ t("boolean.yes") }}</strong></span
                         >
-                        <span v-else-if="vod.twitch_vod_muted === MuteStatus.UNMUTED" class="px-1">{{ t("boolean.no") }}</span>
+                        <span v-else-if="(vod as any).twitch_vod_muted === MuteStatus.UNMUTED" class="px-1">{{ t("boolean.no") }}</span>
                         <span v-else class="px-1"
                             ><em>{{ t("boolean.no-data") }}</em></span
                         >

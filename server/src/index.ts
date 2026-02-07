@@ -100,8 +100,7 @@ void LiveStreamDVR.init().then(() => {
     const server = app.listen(port, () => {
         console.log(
             chalk.bgBlue.greenBright(
-                `🥞 ${AppName} listening on port ${port}, mode ${
-                    process.env.NODE_ENV
+                `🥞 ${AppName} listening on port ${port}, mode ${process.env.NODE_ENV
                 }. Base path: ${Config.getBasePath() || "/"} 🥞`
             )
         );
@@ -208,9 +207,8 @@ void LiveStreamDVR.init().then(() => {
                 undefined,
                 "system"
             );
-            const errorText = `[${AppName} ${version} ${
-                Config.getInstance().gitHash
-            }]\nUNCAUGHT EXCEPTION\n${err.name}: ${err.message}\n${err.stack}`;
+            const errorText = `[${AppName} ${version} ${Config.getInstance().gitHash
+                }]\nUNCAUGHT EXCEPTION\n${err.name}: ${err.message}\n${err.stack}`;
             fs.writeFileSync(
                 path.join(BaseConfigDataFolder.logs, "crash.log"),
                 errorText
@@ -239,11 +237,9 @@ void LiveStreamDVR.init().then(() => {
                 undefined,
                 "system"
             );
-            const errorText = `[${AppName} ${version} ${
-                Config.getInstance().gitHash
-            }]\nUNCAUGHT REJECTION\n${reason.name}: ${reason.message}\n${
-                reason.stack
-            }\n\n${promise}`;
+            const errorText = `[${AppName} ${version} ${Config.getInstance().gitHash
+                }]\nUNCAUGHT REJECTION\n${reason.name}: ${reason.message}\n${reason.stack
+                }\n\n${promise}`;
             fs.writeFileSync(
                 path.join(BaseConfigDataFolder.logs, "crash.log"),
                 errorText
@@ -257,9 +253,21 @@ void LiveStreamDVR.init().then(() => {
     LiveStreamDVR.server = server;
     if (websocketServer) LiveStreamDVR.websocketServer = websocketServer;
 
+    let shutdownRequested = false;
     process.on("SIGINT", (signal) => {
         console.log(`Sigint received, shutting down (signal ${signal})`);
+        if (shutdownRequested) {
+            console.log("Force exiting immediately (second SIGINT)...");
+            process.exit(1);
+        }
+        shutdownRequested = true;
         LiveStreamDVR.shutdown("sigint");
+
+        // Force exit after 5 seconds if graceful shutdown hangs
+        setTimeout(() => {
+            console.log("Force exiting after 5s timeout...");
+            process.exit(1);
+        }, 5000).unref();
     });
 
     LiveStreamDVR.postInit();

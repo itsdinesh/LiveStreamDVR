@@ -467,7 +467,13 @@ export function validateMediaInfo(info: MediaInfoObject): boolean {
     }
 
     if (info.video && !info.video.FrameRate) {
-        throw new Error("Missing video framerate");
+        // Some video formats (especially from streamlink) may not have framerate metadata
+        // Log a warning but don't throw - this is not critical for VOD functionality
+        log(
+            LOGLEVEL.WARNING,
+            "helper.validateMediaInfo",
+            "Missing video framerate in metadata (non-critical)"
+        );
     }
 
     return true;
@@ -659,8 +665,7 @@ export async function videometadata(
             log(
                 LOGLEVEL.ERROR,
                 "helper.videometadata",
-                `Trying to get mediainfo of ${filename} returned: ${
-                    (error as Error).message
+                `Trying to get mediainfo of ${filename} returned: ${(error as Error).message
                 }`,
                 error
             );
@@ -693,8 +698,7 @@ export async function videometadata(
         log(
             LOGLEVEL.ERROR,
             "helper.videometadata",
-            `Invalid mediainfo for ${filename} (missing ${
-                !data.general.Format ? "Format" : ""
+            `Invalid mediainfo for ${filename} (missing ${!data.general.Format ? "Format" : ""
             } ${!data.general.Duration ? "Duration" : ""})`
         );
         throw new Error("Invalid mediainfo: no format/duration");
@@ -804,8 +808,8 @@ export function ffmpeg_time(ms: number): string {
     return `${hours.toString().padStart(2, "0")}:${minutes
         .toString()
         .padStart(2, "0")}:${seconds.toString().padStart(2, "0")}.${milliseconds
-        .toString()
-        .padStart(3, "0")}`;
+            .toString()
+            .padStart(3, "0")}`;
 }
 
 export async function videoThumbnail(

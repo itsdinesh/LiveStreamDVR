@@ -336,6 +336,7 @@
       "refresh-data": "Refresh data",
       "expand-collapse-all-vods": "Expand/collapse all vods",
       "more": "More tools",
+      "configure-schedule": "Schedule",
       "match-all-provider-vods": "Match all provider VODs"
     }
   },

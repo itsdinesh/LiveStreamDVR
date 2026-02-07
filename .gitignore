@@ -31,3 +31,11 @@ data/config
 data/payloads
 data/backup
 release/
+venv/
+.yarnrc.yml
+package.json
+yarn.lock
+.yarn/install-state.gz
+.yarn/releases/yarn-4.12.0.cjs
+server/package.json
+twitch-chat-dumper/package.json

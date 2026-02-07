@@ -68,7 +68,7 @@ import axios from "axios";
 import { useI18n } from "vue-i18n";
 import { formatBytes } from "@/mixins/newhelpers";
 import type { VODTypes } from "@/twitchautomator";
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 const props = defineProps({
     vod: {
@@ -85,6 +85,20 @@ const isCollapsed = ref<boolean>(true);
 
 onMounted(() => {
     isCollapsed.value = props.vod.segments.length == 0 ? true : store.videoBlockShow.segments;
+});
+
+// Auto-expand when segments are added (e.g. after recording stops)
+watch(() => props.vod.segments.length, (newVal, oldVal) => {
+    if (newVal > 0 && oldVal === 0) {
+        isCollapsed.value = false;
+    }
+});
+
+// Auto-expand when recording stops and segments exist
+watch(() => props.vod.is_capturing, (newVal, oldVal) => {
+    if (oldVal === true && newVal === false && props.vod.segments.length > 0) {
+        isCollapsed.value = false;
+    }
 });
 
 function doDeleteSegment(index = 0) {

@@ -13,6 +13,8 @@ import { TwitchVOD } from "@/Core/Providers/Twitch/TwitchVOD";
 import { YouTubeAutomator } from "@/Core/Providers/YouTube/YouTubeAutomator";
 import { YouTubeChannel } from "@/Core/Providers/YouTube/YouTubeChannel";
 import { YouTubeVOD } from "@/Core/Providers/YouTube/YouTubeVOD";
+import { RTSPChannel } from "@/Core/Providers/RTSP/RTSPChannel";
+import { StreamlinkChannel } from "@/Core/Providers/Streamlink/StreamlinkChannel";
 import { Webhook } from "@/Core/Webhook";
 import { debugLog } from "@/Helpers/Console";
 import {
@@ -35,11 +37,14 @@ import type {
     ApiErrorResponse,
     ApiGenericResponse,
     ApiResponse,
+    ApiChannels,
 } from "@common/Api/Api";
 import type {
     KickChannelConfig,
     TwitchChannelConfig,
     YouTubeChannelConfig,
+    RTSPChannelConfig,
+    StreamlinkChannelConfig,
 } from "@common/Config";
 import type { Providers } from "@common/Defs";
 import { VideoQualityArray } from "@common/Defs";
@@ -68,7 +73,7 @@ export async function ListChannels(
 
     res.api<ApiChannelsResponse>(200, {
         data: {
-            streamer_list: streamer_list,
+            streamer_list: streamer_list as ApiChannels[],
             total_size: total_size,
             // free_size: fs.statSync(TwitchHelper.vodFolder()).size,
             free_size: LiveStreamDVR.getInstance().freeStorageDiskSpace, // broken until further notice
@@ -79,7 +84,7 @@ export async function ListChannels(
 
 const getChannelFromRequest = (
     req: express.Request
-): TwitchChannel | YouTubeChannel | KickChannel | undefined => {
+): TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel | undefined => {
     if (req.params.uuid) {
         return (
             LiveStreamDVR.getInstance().getChannelByUUID(req.params.uuid) ||
@@ -175,27 +180,52 @@ export function UpdateChannel(
     */
 
     const formparser = z.object({
+        // Twitch-specific fields (optional for Streamlink/RTSP)
         quality: z.preprocess((val) => {
+            if (val === undefined || val === null) return undefined;
             if (typeof val === "string") {
-                return val.split(" ") as z.infer<typeof VideoQuality>[]; // TODO: validate
+                // Filter out empty strings from the split result
+                const parts = val.split(" ").filter((s) => s.length > 0);
+                return parts.length > 0 ? parts as z.infer<typeof VideoQuality>[] : undefined;
             }
+            // Treat empty arrays as undefined to preserve existing value
+            if (Array.isArray(val) && val.length === 0) return undefined;
             return val;
-        }, z.array(VideoQuality)),
+        }, z.array(VideoQuality).optional()),
         match: z.preprocess((val) => {
+            if (val === undefined || val === null) return undefined;
             if (typeof val === "string") {
-                return val.split(",").map((m) => m.trim());
+                // Filter out empty strings from the split result
+                const parts = val.split(",").map((m) => m.trim()).filter((s) => s.length > 0);
+                return parts.length > 0 ? parts : undefined;
             }
+            // Treat empty arrays as undefined to preserve existing value
+            if (Array.isArray(val) && val.length === 0) return undefined;
             return val;
-        }, z.array(z.string())),
-        download_chat: z.boolean(),
-        burn_chat: z.boolean(),
-        no_capture: z.boolean(),
-        live_chat: z.boolean(),
-        no_cleanup: z.boolean(),
-        max_storage: z.number(),
-        max_vods: z.number(),
-        download_vod_at_end: z.boolean(),
-        download_vod_at_end_quality: VideoQuality,
+        }, z.array(z.string()).optional()),
+        download_chat: z.boolean().optional(),
+        burn_chat: z.boolean().optional(),
+        no_capture: z.boolean().optional(),
+        live_chat: z.boolean().optional(),
+        no_cleanup: z.boolean().optional(),
+        max_storage: z.number().optional(),
+        max_vods: z.number().optional(),
+        download_vod_at_end: z.boolean().optional(),
+        download_vod_at_end_quality: VideoQuality.optional(),
+        // Streamlink/RTSP and common fields
+        url: z.preprocess((val) => {
+            if (val === "" || val === null) return undefined;
+            return val;
+        }, z.string().optional()),
+        icon_url: z.preprocess((val) => {
+            if (val === "" || val === null) return undefined;
+            return val;
+        }, z.string().optional()),
+        check_interval: z.number().optional(),
+        check_interval_unit: z.enum(["seconds", "minutes", "hours"]).optional(),
+        max_check_duration: z.number().optional(),
+        max_check_duration_unit: z.enum(["seconds", "minutes", "hours"]).optional(),
+        schedule_enabled: z.boolean().optional(),
     });
 
     const parsedbody = formparser.safeParse(req.body);
@@ -221,6 +251,14 @@ export function UpdateChannel(
         max_vods,
         download_vod_at_end,
         download_vod_at_end_quality,
+        // New fields
+        url,
+        icon_url,
+        check_interval,
+        check_interval_unit,
+        max_check_duration,
+        max_check_duration_unit,
+        schedule_enabled,
     } = parsedbody.data;
 
     if (channel instanceof TwitchChannel) {
@@ -230,17 +268,17 @@ export function UpdateChannel(
             // login: channel.login || "",
             internalId: channel.internalId,
             internalName: channel.internalName,
-            quality: quality,
-            match: match,
-            download_chat: download_chat,
-            burn_chat: burn_chat,
-            no_capture: no_capture,
-            live_chat: live_chat,
-            no_cleanup: no_cleanup,
-            max_storage: max_storage,
-            max_vods: max_vods,
-            download_vod_at_end: download_vod_at_end,
-            download_vod_at_end_quality: download_vod_at_end_quality,
+            quality: quality ?? channel.config?.quality ?? [],
+            match: match ?? channel.config?.match ?? [],
+            download_chat: download_chat ?? channel.config?.download_chat ?? false,
+            burn_chat: burn_chat ?? channel.config?.burn_chat ?? false,
+            no_capture: no_capture ?? channel.config?.no_capture ?? false,
+            live_chat: live_chat ?? channel.config?.live_chat ?? false,
+            no_cleanup: no_cleanup ?? channel.config?.no_cleanup ?? false,
+            max_storage: max_storage ?? channel.config?.max_storage ?? 0,
+            max_vods: max_vods ?? channel.config?.max_vods ?? 0,
+            download_vod_at_end: download_vod_at_end ?? channel.config?.download_vod_at_end ?? false,
+            download_vod_at_end_quality: download_vod_at_end_quality ?? channel.config?.download_vod_at_end_quality ?? "best",
         };
         channel.update(channel_config);
     } else if (channel instanceof YouTubeChannel) {
@@ -250,17 +288,69 @@ export function UpdateChannel(
             // channel_id: channel.channel_id || "",
             internalId: channel.internalId,
             internalName: channel.internalName,
-            quality: quality,
-            match: match,
-            download_chat: download_chat,
-            burn_chat: burn_chat,
-            no_capture: no_capture,
-            live_chat: live_chat,
-            no_cleanup: no_cleanup,
-            max_storage: max_storage,
-            max_vods: max_vods,
-            download_vod_at_end: download_vod_at_end,
-            download_vod_at_end_quality: download_vod_at_end_quality,
+            quality: quality ?? channel.config?.quality ?? [],
+            match: match ?? channel.config?.match ?? [],
+            download_chat: download_chat ?? channel.config?.download_chat ?? false,
+            burn_chat: burn_chat ?? channel.config?.burn_chat ?? false,
+            no_capture: no_capture ?? channel.config?.no_capture ?? false,
+            live_chat: live_chat ?? channel.config?.live_chat ?? false,
+            no_cleanup: no_cleanup ?? channel.config?.no_cleanup ?? false,
+            max_storage: max_storage ?? channel.config?.max_storage ?? 0,
+            max_vods: max_vods ?? channel.config?.max_vods ?? 0,
+            download_vod_at_end: download_vod_at_end ?? channel.config?.download_vod_at_end ?? false,
+            download_vod_at_end_quality: download_vod_at_end_quality ?? channel.config?.download_vod_at_end_quality ?? "best",
+        };
+        channel.update(channel_config);
+    } else if (channel instanceof RTSPChannel) {
+        const channel_config: RTSPChannelConfig = {
+            uuid: channel.uuid,
+            provider: "rtsp",
+            internalId: channel.internalId,
+            internalName: channel.internalName,
+            url: url ?? channel.config?.url ?? "",
+            icon_url: icon_url ?? channel.config?.icon_url,
+            quality: [],
+            match: [],
+            download_chat: false,
+            burn_chat: false,
+            no_capture: no_capture ?? channel.config?.no_capture ?? false,
+            live_chat: false,
+            no_cleanup: no_cleanup ?? channel.config?.no_cleanup ?? false,
+            max_storage: max_storage ?? channel.config?.max_storage ?? 0,
+            max_vods: max_vods ?? channel.config?.max_vods ?? 0,
+            download_vod_at_end: download_vod_at_end ?? channel.config?.download_vod_at_end ?? false,
+            download_vod_at_end_quality: download_vod_at_end_quality ?? channel.config?.download_vod_at_end_quality ?? "best",
+            check_interval: check_interval ?? channel.config?.check_interval,
+            check_interval_unit: check_interval_unit ?? channel.config?.check_interval_unit,
+            max_check_duration: max_check_duration ?? channel.config?.max_check_duration,
+            max_check_duration_unit: max_check_duration_unit ?? channel.config?.max_check_duration_unit,
+            schedule_enabled: schedule_enabled ?? channel.config?.schedule_enabled,
+        };
+        channel.update(channel_config);
+    } else if (channel instanceof StreamlinkChannel) {
+        const channel_config: StreamlinkChannelConfig = {
+            uuid: channel.uuid,
+            provider: "streamlink",
+            internalId: channel.internalId,
+            internalName: channel.internalName,
+            url: url ?? channel.config?.url ?? "",
+            icon_url: icon_url ?? channel.config?.icon_url,
+            quality: quality ?? channel.config?.quality ?? [],
+            match: match ?? channel.config?.match ?? [],
+            download_chat: false,
+            burn_chat: false,
+            no_capture: no_capture ?? channel.config?.no_capture ?? false,
+            live_chat: false,
+            no_cleanup: no_cleanup ?? channel.config?.no_cleanup ?? false,
+            max_storage: max_storage ?? channel.config?.max_storage ?? 0,
+            max_vods: max_vods ?? channel.config?.max_vods ?? 0,
+            download_vod_at_end: download_vod_at_end ?? channel.config?.download_vod_at_end ?? false,
+            download_vod_at_end_quality: download_vod_at_end_quality ?? channel.config?.download_vod_at_end_quality ?? "best",
+            check_interval: check_interval ?? channel.config?.check_interval,
+            check_interval_unit: check_interval_unit ?? channel.config?.check_interval_unit,
+            max_check_duration: max_check_duration ?? channel.config?.max_check_duration,
+            max_check_duration_unit: max_check_duration_unit ?? channel.config?.max_check_duration_unit,
+            schedule_enabled: schedule_enabled ?? channel.config?.schedule_enabled,
         };
         channel.update(channel_config);
     }
@@ -286,13 +376,13 @@ export async function DeleteChannel(
     if (!channel || !channel.internalName) {
         if (
             LiveStreamDVR.getInstance().channels_config.find(
-                (c) => c instanceof TwitchChannel && c.uuid === req.params.uuid
+                (c) => c.uuid === req.params.uuid
             )
         ) {
             LiveStreamDVR.getInstance().channels_config =
                 LiveStreamDVR.getInstance().channels_config.filter(
                     (c) =>
-                        c instanceof TwitchChannel && c.uuid !== req.params.uuid
+                        c.uuid !== req.params.uuid
                 );
             LiveStreamDVR.getInstance().saveChannelsConfig();
 
@@ -326,8 +416,7 @@ export async function DeleteChannel(
             log(
                 LOGLEVEL.ERROR,
                 "route.channels.deleteAllVods",
-                `Failed to delete all VODs of channel: ${
-                    (error as Error).message
+                `Failed to delete all VODs of channel: ${(error as Error).message
                 }`
             );
             res.api<ApiErrorResponse>(400, {
@@ -394,25 +483,39 @@ export async function AddChannel(
         internalName: z.string().optional(),
         quality: z.preprocess((val) => {
             if (typeof val === "string") {
-                return val.split(" ") as z.infer<typeof VideoQuality>[]; // TODO: validate
+                const parts = val.split(" ").filter((s) => s.length > 0);
+                return parts as z.infer<typeof VideoQuality>[];
             }
-            return val;
+            return !val || (Array.isArray(val) && val.length === 0) ? [] : val;
         }, z.array(VideoQuality)),
         match: z.preprocess((val) => {
             if (typeof val === "string") {
-                return val.split(",").map((m) => m.trim());
+                return val.split(",").map((m) => m.trim()).filter((s) => s.length > 0);
             }
-            return val;
+            return !val || (Array.isArray(val) && val.length === 0) ? [] : val;
         }, z.array(z.string())),
-        download_chat: z.boolean(),
-        burn_chat: z.boolean(),
-        no_capture: z.boolean(),
-        live_chat: z.boolean(),
-        no_cleanup: z.boolean(),
-        max_storage: z.number(),
-        max_vods: z.number(),
-        download_vod_at_end: z.boolean(),
-        download_vod_at_end_quality: VideoQuality,
+        download_chat: z.boolean().default(false),
+        burn_chat: z.boolean().default(false),
+        no_capture: z.boolean().default(false),
+        live_chat: z.boolean().default(false),
+        no_cleanup: z.boolean().default(false),
+        max_storage: z.number().default(0),
+        max_vods: z.number().default(0),
+        download_vod_at_end: z.boolean().default(false),
+        download_vod_at_end_quality: VideoQuality.default("best"),
+        url: z.preprocess((val) => {
+            if (val === "" || val === null) return undefined;
+            return val;
+        }, z.string().optional()),
+        icon_url: z.preprocess((val) => {
+            if (val === "" || val === null) return undefined;
+            return val;
+        }, z.string().optional()),
+        check_interval: z.number().optional(),
+        check_interval_unit: z.enum(["seconds", "minutes", "hours"]).optional(),
+        max_check_duration: z.number().optional(),
+        max_check_duration_unit: z.enum(["seconds", "minutes", "hours"]).optional(),
+        schedule_enabled: z.boolean().optional(),
     });
 
     const parsedbody = formparser.safeParse(req.body);
@@ -504,8 +607,7 @@ export async function AddChannel(
             log(
                 LOGLEVEL.ERROR,
                 "route.channels.add",
-                `Failed to create channel, API error: ${
-                    (error as Error).message
+                `Failed to create channel, API error: ${(error as Error).message
                 }`
             );
             res.api(400, {
@@ -612,8 +714,7 @@ export async function AddChannel(
             log(
                 LOGLEVEL.ERROR,
                 "route.channels.add",
-                `Failed to create channel, API error: ${
-                    (error as Error).message
+                `Failed to create channel, API error: ${(error as Error).message
                 }`
             );
             res.api(400, {
@@ -707,8 +808,7 @@ export async function AddChannel(
             log(
                 LOGLEVEL.ERROR,
                 "route.channels.add",
-                `Failed to create channel, API error: ${
-                    (error as Error).message
+                `Failed to create channel, API error: ${(error as Error).message
                 }`
             );
             res.api(400, {
@@ -720,6 +820,114 @@ export async function AddChannel(
 
         try {
             new_channel = await KickChannel.create(channel_config);
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "route.channels.add",
+                `Failed to create channel: ${error}`
+            );
+            res.api(400, {
+                status: "ERROR",
+                message: (error as Error).message,
+            } as ApiErrorResponse);
+            return;
+        }
+
+        log(
+            LOGLEVEL.SUCCESS,
+            "route.channels.add",
+            `Created channel: ${new_channel.displayName}`
+        );
+    } else if (provider == "rtsp") {
+        if (!formdata.url) {
+            res.api(400, {
+                status: "ERROR",
+                message: "No URL specified",
+            } as ApiErrorResponse);
+            return;
+        }
+
+        const channel_config: RTSPChannelConfig = {
+            uuid: "",
+            provider: "rtsp",
+            internalId: "", // Not used
+            internalName: formdata.internalName || "RTSP",
+            url: formdata.url,
+            icon_url: formdata.icon_url,
+            quality: formdata.quality,
+            match: formdata.match,
+            download_chat: false,
+            burn_chat: false,
+            no_capture: formdata.no_capture,
+            live_chat: false,
+            no_cleanup: formdata.no_cleanup,
+            max_storage: formdata.max_storage,
+            max_vods: formdata.max_vods,
+            download_vod_at_end: formdata.download_vod_at_end,
+            download_vod_at_end_quality: formdata.download_vod_at_end_quality,
+            check_interval: formdata.check_interval,
+            check_interval_unit: formdata.check_interval_unit,
+            max_check_duration: formdata.max_check_duration,
+            max_check_duration_unit: formdata.max_check_duration_unit,
+            schedule_enabled: formdata.schedule_enabled,
+        };
+
+        try {
+            new_channel = await RTSPChannel.create(channel_config);
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "route.channels.add",
+                `Failed to create channel: ${error}`
+            );
+            res.api(400, {
+                status: "ERROR",
+                message: (error as Error).message,
+            } as ApiErrorResponse);
+            return;
+        }
+
+        log(
+            LOGLEVEL.SUCCESS,
+            "route.channels.add",
+            `Created channel: ${new_channel.displayName}`
+        );
+    } else if (provider == "streamlink") {
+        if (!formdata.url) {
+            res.api(400, {
+                status: "ERROR",
+                message: "No URL specified",
+            } as ApiErrorResponse);
+            return;
+        }
+
+        const channel_config: StreamlinkChannelConfig = {
+            uuid: "",
+            provider: "streamlink",
+            internalId: "", // Not used
+            internalName: formdata.internalName || "Streamlink",
+            url: formdata.url,
+            icon_url: formdata.icon_url,
+            quality: formdata.quality,
+            match: formdata.match,
+            download_chat: false,
+            burn_chat: false,
+            no_capture: formdata.no_capture,
+            live_chat: false,
+            no_cleanup: formdata.no_cleanup,
+            max_storage: formdata.max_storage,
+            max_vods: formdata.max_vods,
+            download_vod_at_end: formdata.download_vod_at_end,
+            download_vod_at_end_quality: formdata.download_vod_at_end_quality,
+            check_interval: formdata.check_interval,
+            check_interval_unit: formdata.check_interval_unit,
+            max_check_duration: formdata.max_check_duration,
+            max_check_duration_unit: formdata.max_check_duration_unit,
+            schedule_enabled: formdata.schedule_enabled,
+        };
+
+        try {
+            new_channel = await StreamlinkChannel.create(channel_config);
         } catch (error) {
             log(
                 LOGLEVEL.ERROR,
@@ -776,7 +984,7 @@ export async function DownloadVideo(
     const video_id = req.params.video_id;
     const quality =
         req.query.quality &&
-        VideoQualityArray.includes(req.query.quality as string)
+            VideoQualityArray.includes(req.query.quality as string)
             ? (req.query.quality as z.infer<typeof VideoQuality>)
             : "best";
 
@@ -1089,9 +1297,8 @@ export async function DownloadVideo(
         } catch (error) {
             res.api(400, {
                 status: "ERROR",
-                message: `Error while fetching video data: ${
-                    (error as Error).message
-                }`,
+                message: `Error while fetching video data: ${(error as Error).message
+                    }`,
             } as ApiErrorResponse);
             return;
         }
@@ -1458,7 +1665,7 @@ export async function ForceRecord(
 ): Promise<void> {
     const channel = getChannelFromRequest(req);
 
-    if (!channel || !channel.internalId) {
+    if (!channel) {
         res.api(400, {
             status: "ERROR",
             message: req.t("route.channels.channel-not-found"),
@@ -1563,6 +1770,57 @@ export async function ForceRecord(
             } as ApiErrorResponse);
             return;
         }
+    } else if (
+        channel instanceof RTSPChannel ||
+        channel instanceof StreamlinkChannel
+    ) {
+        if (channel.is_capturing) {
+            res.api(400, {
+                status: "ERROR",
+                message: "Channel is already capturing",
+            } as ApiErrorResponse);
+            return;
+        }
+
+        let isLive = false;
+        try {
+            isLive = await channel.isLiveApi();
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "route.channels.force_record",
+                `Could not get live status for ${channel.internalName}: ${error}`
+            );
+            res.api(400, {
+                status: "ERROR",
+                message: "Could not get live status",
+            } as ApiErrorResponse);
+            return;
+        }
+
+        if (isLive) {
+            log(
+                LOGLEVEL.INFO,
+                "route.channels.force_record",
+                `Forcing record for ${channel.internalName}`
+            );
+
+            await channel.downloadLatestVod("best");
+
+            res.api(200, {
+                status: "OK",
+                message: req.t(
+                    "route.channels.forced-recording-of-channel-channel-internalname",
+                    [channel.internalName]
+                ),
+            });
+        } else {
+            res.api(400, {
+                status: "ERROR",
+                message: "Stream is offline",
+            } as ApiErrorResponse);
+        }
+        return;
     } else if (isYouTubeChannel(channel)) {
         const streams = await channel.getStreams();
 

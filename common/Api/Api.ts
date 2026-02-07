@@ -3,6 +3,7 @@ import type { ChannelConfig } from "../Config";
 import { settingsFields } from "../ServerConfig";
 import type { AboutData } from "./About";
 import type { ApiChannels, ApiFile, ApiGame, ApiJob, ApiVods } from "./Client";
+export type { ApiChannels, ApiFile, ApiGame, ApiJob, ApiVods } from "./Client";
 
 export interface ApiResponse {
     data: any;

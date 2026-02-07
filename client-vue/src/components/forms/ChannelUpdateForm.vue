@@ -36,7 +36,7 @@
                 </div>
             </div>
 
-            <div class="field">
+            <div v-if="channel.provider !== 'rtsp'" class="field">
                 <label class="label" :for="`input_${channel.uuid}_quality`">{{ t("forms.channel.quality") }} <span class="required">*</span></label>
                 <div class="control">
                     <input
@@ -127,6 +127,16 @@
                     {{ t("forms.channel.no-cleanup") }}
                 </label>
             </div>
+
+            <div v-if="channel.provider === 'streamlink' || channel.provider === 'rtsp'" class="field">
+                <label class="label">Icon URL</label>
+                <div class="control">
+                    <input v-model="formData.icon_url" class="input" type="text" name="icon_url" />
+                </div>
+                <p class="input-help">URL to an image to use as the channel icon</p>
+            </div>
+
+
 
             <div class="field">
                 <label class="checkbox">
@@ -261,6 +271,10 @@ const formData = ref({
     max_vods: 0,
     download_vod_at_end: false,
     download_vod_at_end_quality: "best",
+    schedule_enabled: false,
+    check_interval: 60,
+    max_check_duration: -1,
+    icon_url: "",
 });
 const history = ref<HistoryEntry[]>([]);
 const loadingHistory = ref<boolean>(false);
@@ -309,6 +323,10 @@ function resetForm() {
         max_vods: props.channel.max_vods || 0,
         download_vod_at_end: props.channel.download_vod_at_end || false,
         download_vod_at_end_quality: props.channel.download_vod_at_end_quality || "best",
+        schedule_enabled: props.channel.schedule_enabled || false,
+        check_interval: props.channel.check_interval || 60,
+        max_check_duration: props.channel.max_check_duration || -1,
+        icon_url: (props.channel as any).icon_url || "",
     };
 
     // console.debug("Form data", JSON.stringify(formData.value));
@@ -348,10 +366,11 @@ function submitForm(event: Event) {
 }
 
 function deleteChannel() {
-    if (!confirm(`Do you want to delete "${props.channel.login}"? This cannot be undone.`)) return;
+    const channelName = store.channelUUIDToInternalName(props.channel.uuid);
+    if (!confirm(`Do you want to delete "${channelName}"? This cannot be undone.`)) return;
 
     const deleteVodsToo = confirm(
-        `Do you also want to delete all VODs for "${props.channel.login}"? OK to delete all VODs and channel, Cancel to delete only the channel.`,
+        `Do you also want to delete all VODs for "${channelName}"? OK to delete all VODs and channel, Cancel to delete only the channel.`,
     );
 
     axios
@@ -449,8 +468,9 @@ validateQuality() {
 },
 */
 function renameChannel() {
-    const newLogin = prompt("Enter new channel login. If channel has not changed login, this will fail in the future.\n", props.channel.login);
-    if (!newLogin || newLogin == props.channel.login) return;
+    const channelName = store.channelUUIDToInternalName(props.channel.uuid);
+    const newLogin = prompt("Enter new channel login. If channel has not changed login, this will fail in the future.\n", channelName);
+    if (!newLogin || newLogin == channelName) return;
     axios
         .post<ApiResponse>(`/api/v0/channels/${props.channel.uuid}/rename`, {
             new_login: newLogin,

@@ -25,7 +25,7 @@
             <template v-if="vod.is_converting">
                 <em>
                     <span class="icon"><font-awesome-icon icon="file-signature" /></span>
-                    Converting <strong>{{ vod.basename }}.ts</strong> to <strong>{{ vod.basename }}.{{ store.cfg("vod_container", "mp4") }}</strong>
+                    Converting <strong>{{ vod.basename }}.{{ vod.provider === 'streamlink' || vod.provider === 'rtsp' ? 'mp4' : 'ts' }}</strong> to <strong>{{ vod.basename }}.{{ store.cfg("vod_container", "mp4") }}</strong>
                 </em>
                 <br />
                 <em>
@@ -43,7 +43,7 @@
             <template v-else-if="vod && vod.is_capturing">
                 <em class="text-overflow">
                     <span class="icon"><font-awesome-icon icon="video" /></span>
-                    Capturing to <strong>{{ vod.basename }}.ts</strong> (<strong>{{
+                    Capturing to <strong>{{ vod.basename }}.{{ vod.provider === 'streamlink' || vod.provider === 'rtsp' ? 'mp4' : 'ts' }}</strong> (<strong>{{
                         vod.getRecordingSize() ? formatBytes(vod.getRecordingSize() as number) : "unknown"
                     }}</strong
                     >)

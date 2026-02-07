@@ -1,13 +1,20 @@
 import type { Providers } from "@common/Defs";
-import { JobStatus } from "@common/Defs";
+import { JobStatus, MuteStatus } from "@common/Defs";
 import type { ExportData } from "@common/Exporter";
 import type { AudioMetadata, VideoMetadata } from "@common/MediaInfo";
 import type { VodViewerEntry, StreamPause } from "@common/Vod";
 import type { BaseVODChapter } from "./BaseVODChapter";
 import { BaseVODSegment } from "./BaseVODSegment";
 import type { ApiBaseVod } from "@common/Api/Client";
+import { useStore } from "@/store";
+import type BaseChannel from "./BaseChannel";
+import type { VODBookmark } from "@common/Bookmark";
 
 export default class BaseVOD {
+    stream_resolution: string | undefined = "";
+    stream_title = "";
+    twitch_vod_muted: MuteStatus | undefined = MuteStatus.UNKNOWN;
+    bookmarks: VODBookmark[] = [];
     provider: Providers = "base";
     uuid = "";
     channel_uuid = "";
@@ -94,6 +101,7 @@ export default class BaseVOD {
         const vod = new BaseVOD();
         vod.uuid = apiResponse.uuid;
         vod.channel_uuid = apiResponse.channel_uuid;
+        vod.provider = apiResponse.provider;
         vod.basename = apiResponse.basename;
         vod.capture_id = apiResponse.capture_id;
         vod.is_capturing = apiResponse.is_capturing;
@@ -125,7 +133,7 @@ export default class BaseVOD {
         vod.convertingStatus = apiResponse.api_getConvertingStatus;
         vod.recordingSize = apiResponse.api_getRecordingSize;
         vod.capturingStatus = apiResponse.api_getCapturingStatus;
-        
+
         vod.total_size = apiResponse.total_size;
         vod.stream_number = apiResponse.stream_number;
         vod.stream_season = apiResponse.stream_season;
@@ -134,13 +142,13 @@ export default class BaseVOD {
         vod.comment = apiResponse.comment;
         vod.prevent_deletion = apiResponse.prevent_deletion;
         vod.failed = apiResponse.failed || false;
-        
+
         vod.cloud_storage = apiResponse.cloud_storage || false;
         vod.exportData = apiResponse.export_data || {};
         vod.viewers = apiResponse.viewers
             ? apiResponse.viewers.map((entry) => {
-                  return { timestamp: new Date(entry.timestamp), amount: entry.amount };
-              })
+                return { timestamp: new Date(entry.timestamp), amount: entry.amount };
+            })
             : [];
         vod.stream_pauses = apiResponse.stream_pauses
             ? apiResponse.stream_pauses.map((entry) => ({ start: new Date(entry.start), end: new Date(entry.end) }))
@@ -200,4 +208,31 @@ export default class BaseVOD {
             return null;
         }
     }
+
+    public getDurationLive(): number | false {
+        return this.duration;
+    }
+
+    public getWebhookDuration(): string | undefined {
+        return "0s";
+    }
+
+    public getChannel(): BaseChannel {
+        const store = useStore();
+        const streamer = store.streamerList.find((streamer) => streamer.uuid == this.channel_uuid);
+        if (!streamer) {
+            throw new Error("No streamer for vod");
+        }
+        return streamer as unknown as BaseChannel;
+    }
+
+    public getUniqueGames(): any[] {
+        return [];
+    }
+
+    public hasFavouriteGame(): boolean {
+        return false;
+    }
+
+
 }
