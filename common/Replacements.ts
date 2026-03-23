@@ -18,6 +18,7 @@ export interface VodBasenameTemplate extends Record<string, string> {
     title: string;
     game_name: string;
     game_id: string;
+    provider: string;
 }
 
 export interface VodBasenameWithChapterTemplate extends VodBasenameTemplate {

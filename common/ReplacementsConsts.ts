@@ -20,6 +20,7 @@ export const VodBasenameFields: Record<keyof VodBasenameTemplate, TemplateField>
     title: { display: "Moose crosses river HOT NEW CONTENT COME LOOK" },
     game_name: { display: "Moose Simulator 2022" },
     game_id: { display: "123456789" },
+    provider: { display: "Twitch" },
 };
 
 export const VodBasenameChapterFields: Record<keyof VodBasenameWithChapterTemplate, TemplateField> = {

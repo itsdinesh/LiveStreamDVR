@@ -128,7 +128,7 @@
                 </label>
             </div>
 
-            <div v-if="channel.provider === 'streamlink' || channel.provider === 'rtsp'" class="field">
+            <div v-if="channel.provider === 'streamlink' || channel.provider === 'rtsp' || channel.provider === 'ytdlp'" class="field">
                 <label class="label">Icon URL</label>
                 <div class="control">
                     <input v-model="formData.icon_url" class="input" type="text" name="icon_url" />

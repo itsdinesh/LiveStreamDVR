@@ -65,7 +65,7 @@
                             <li v-if="vod.provider == 'twitch'">
                                 <strong>Watch live:</strong> <a :href="vod.getChannel().url" rel="noreferrer" target="_blank">Twitch</a>
                             </li>
-                            <li>
+                            <li v-if="vod.provider !== 'ytdlp'">
                                 <strong>Rewind:</strong>
                                 <a
                                     :href="predictedFirstSegmentUrl"
@@ -79,7 +79,7 @@
                         </ul>
                         <!-- Stop Recording button for Streamlink/RTSP providers -->
                         <button
-                            v-if="vod.provider === 'streamlink' || vod.provider === 'rtsp'"
+                            v-if="vod.provider === 'streamlink' || vod.provider === 'rtsp' || vod.provider === 'ytdlp'"
                             class="button is-small is-danger"
                             :disabled="isStoppingRecording"
                             @click="stopRecording"
@@ -133,7 +133,7 @@ const emit = defineEmits<{
 
 const predictedFirstSegmentUrl = computed(() => {
     if (!props.vod) return "";
-    const ext = props.vod.provider === 'streamlink' || props.vod.provider === 'rtsp' ? 'mp4' : 'ts';
+    const ext = props.vod.provider === 'streamlink' || props.vod.provider === 'rtsp' || props.vod.provider === 'ytdlp' ? 'mp4' : 'ts';
     return `${props.vod.webpath}/${props.vod.basename}.${ext}`;
 });
 

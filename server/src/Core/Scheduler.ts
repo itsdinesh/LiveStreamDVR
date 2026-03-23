@@ -15,6 +15,8 @@ import { LiveStreamDVR } from "./LiveStreamDVR";
 import { LOGLEVEL, log } from "./Log";
 import { TwitchChannel } from "./Providers/Twitch/TwitchChannel";
 import { TwitchVOD } from "./Providers/Twitch/TwitchVOD";
+import { StreamlinkChannel } from "./Providers/Streamlink/StreamlinkChannel";
+import { YTDLpChannel } from "./Providers/YTDLp/YTDLpChannel";
 
 export class Scheduler {
     public static jobs: Record<string, cron.CronJob> = {};
@@ -396,12 +398,12 @@ export class Scheduler {
         );
 
         for (const channel of LiveStreamDVR.getInstance().getChannels()) {
-            const [completedVods, failedVods] = await channel.exportAllVods();
-            log(
-                LOGLEVEL.INFO,
-                "Scheduler.scheduleAllChannelVodExport",
-                `Scheduler: scheduleAllChannelVodExport - ${channel.displayName} - completed: ${completedVods} - failed: ${failedVods}`
-            );
+            if (channel instanceof TwitchChannel || channel instanceof StreamlinkChannel || channel instanceof YTDLpChannel) {
+                const [completedVods, failedVods] = await channel.exportAllVods();
+                log(LOGLEVEL.INFO, "scheduler.exportAllVods", `Exported <b>${completedVods}</b> VODs, failed <b>${failedVods}</b>`);
+            } else {
+                log(LOGLEVEL.ERROR, "scheduler.exportAllVods", `Channel ${channel.uuid} is not supported for export all vods`);
+            }
         }
 
         log(

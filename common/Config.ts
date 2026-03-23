@@ -205,9 +205,15 @@ export interface StreamlinkChannelConfig extends BaseChannelConfig {
     icon_url?: string;
 }
 
+export interface YTDLpChannelConfig extends BaseChannelConfig {
+    provider: "ytdlp";
+    icon_url?: string;
+}
+
 export type ChannelConfig =
     | TwitchChannelConfig
     | YouTubeChannelConfig
     | KickChannelConfig
     | RTSPChannelConfig
-    | StreamlinkChannelConfig;
+    | StreamlinkChannelConfig
+    | YTDLpChannelConfig;

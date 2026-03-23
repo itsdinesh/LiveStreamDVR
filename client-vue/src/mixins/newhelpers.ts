@@ -2,9 +2,10 @@ import TwitchChannel from "@/core/Providers/Twitch/TwitchChannel";
 import TwitchVOD from "@/core/Providers/Twitch/TwitchVOD";
 import YouTubeChannel from "@/core/Providers/YouTube/YouTubeChannel";
 import YouTubeVOD from "@/core/Providers/YouTube/YouTubeVOD";
+import YTDLpChannel from "@/core/Providers/YTDLp/YTDLpChannel";
 import type { ChannelTypes, VODTypes } from "@/twitchautomator";
 import { format, formatDistance, parseJSON, isDate } from "date-fns";
-import type { ApiTwitchChannel, ApiYouTubeChannel, ApiTwitchVod, ApiYouTubeVod, ApiRTSPChannel, ApiStreamlinkChannel, ApiRTSPVod, ApiStreamlinkVod } from "@common/Api/Client";
+import type { ApiTwitchChannel, ApiYouTubeChannel, ApiTwitchVod, ApiYouTubeVod, ApiRTSPChannel, ApiStreamlinkChannel, ApiRTSPVod, ApiStreamlinkVod, ApiYTDLpChannel, ApiYTDLpVod } from "@common/Api/Client";
 
 export function niceDuration(durationInSeconds: number): string {
     if (durationInSeconds < 0) {
@@ -166,6 +167,10 @@ export function isStreamlinkChannel(vod: ChannelTypes): vod is any { // TODO: St
     return vod.provider == "streamlink";
 }
 
+export function isYTDLpChannel(vod: ChannelTypes): vod is YTDLpChannel {
+    return vod instanceof YTDLpChannel;
+}
+
 export function isTwitchApiChannel(vod: any): vod is ApiTwitchChannel {
     return vod.provider == "twitch";
 }
@@ -188,6 +193,14 @@ export function isRTSPApiChannel(vod: any): vod is ApiRTSPChannel {
 
 export function isStreamlinkApiChannel(vod: any): vod is ApiStreamlinkChannel {
     return vod.provider == "streamlink";
+}
+
+export function isYTDLpApiChannel(vod: any): vod is ApiYTDLpChannel {
+    return vod.provider == "ytdlp";
+}
+
+export function isYTDLpApiVOD(vod: any): vod is ApiYTDLpVod {
+    return vod.provider == "ytdlp";
 }
 
 // TODO: VODs

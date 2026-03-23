@@ -327,20 +327,25 @@ export class Helper {
      * @returns
      */
     public static path_youtubedl(): string | false {
-        if (!this.bin_dir()) return false;
-        const full_path = path.join(this.bin_dir(), executable_name("yt-dlp"));
-        const exists = fs.existsSync(full_path);
-
-        if (!exists) {
-            log(
-                LOGLEVEL.ERROR,
-                "helper.path_youtubedl",
-                `yt-dlp binary not found at: ${full_path}`
-            );
-            return false;
+        if (Config.getInstance().hasValue("ytdlp_path")) {
+            return Config.getInstance().cfg<string>("ytdlp_path");
         }
 
-        return exists ? full_path : false;
+        const bin_dir = this.bin_dir();
+        if (bin_dir) {
+            const full_path = path.join(bin_dir, executable_name("yt-dlp"));
+            if (fs.existsSync(full_path)) return full_path;
+        }
+
+        // Check common system paths
+        const system_paths = ["/usr/bin/yt-dlp", "/usr/local/bin/yt-dlp", "/root/.local/bin/yt-dlp"];
+        for (const sp of system_paths) {
+            if (fs.existsSync(sp)) return sp;
+        }
+
+        // Fallback to name for PATH resolution
+        log(LOGLEVEL.DEBUG, "helper.path_youtubedl", "Using fallback 'yt-dlp'");
+        return "yt-dlp";
     }
 
     /**

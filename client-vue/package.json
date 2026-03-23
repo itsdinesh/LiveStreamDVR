@@ -1,14 +1,14 @@
 {
   "name": "livestreamdvr-client",
-  "version": "2.4.3",
+  "version": "2.5.0",
   "private": true,
   "homepage": "https://github.com/MrBrax/LiveStreamDVR",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check build-only",
+    "build": "run-s type-check build-only",
     "preview": "vite preview",
     "build-only": "vite build",
-    "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
+    "type-check": "NODE_OPTIONS=\"${NODE_OPTIONS} --max-old-space-size=1024\" vue-tsc --noEmit -p tsconfig.app.json --composite false",
     "test": "vitest --environment jsdom",
     "generate-licenses": "yarn licenses generate-disclaimer > LICENSES.txt",
     "lint": "eslint --ext .ts,.vue src",

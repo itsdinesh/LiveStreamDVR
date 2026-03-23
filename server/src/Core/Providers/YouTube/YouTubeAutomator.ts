@@ -4,6 +4,7 @@ import { KeyValue } from "../../../Core/KeyValue";
 import { BaseAutomator } from "../Base/BaseAutomator";
 
 export class YouTubeAutomator extends BaseAutomator {
+    public realm = "youtube";
     public getVodID(): string | false {
         return (
             KeyValue.getInstance().get(`yt.${this.getUserID()}.vod.id`) || false

@@ -48,7 +48,7 @@ describe("Automator", () => {
 
         kv.delete("test.vod.started_at");
 
-        expect(TA.vodBasenameTemplate()).toBe("test_{year}_{month}_{day}");
+        expect(TA.vodBasenameTemplate()).toBe("test_");
 
         // spy.mockRestore();
     });

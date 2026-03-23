@@ -11,12 +11,12 @@
         </button>
 
         <!-- force recording -->
-        <button v-else-if="streamer.provider == 'streamlink' || streamer.provider == 'rtsp'" class="icon-button white" :title="t('streamer.tools.force-record')" @click="forceRecord">
+        <button v-else-if="streamer.provider == 'twitch' || streamer.provider == 'streamlink' || streamer.provider == 'rtsp' || streamer.provider == 'ytdlp'" class="icon-button white" :title="t('streamer.tools.force-record')" @click="forceRecord">
             <span class="icon"><font-awesome-icon icon="video" /></span>
         </button>
 
         <!-- schedule -->
-        <button v-if="streamer.provider == 'streamlink' || streamer.provider == 'rtsp'" class="icon-button white" :class="{ 'is-active': streamer.schedule_enabled }" :title="t('streamer.tools.configure-schedule')" @click="showScheduleModal = true">
+        <button v-if="streamer.provider == 'streamlink' || streamer.provider == 'rtsp' || streamer.provider == 'ytdlp'" class="icon-button white" :class="{ 'is-active': streamer.schedule_enabled }" :title="t('streamer.tools.configure-schedule')" @click="showScheduleModal = true">
             <span class="icon"><font-awesome-icon icon="clock" /></span>
         </button>
 
@@ -202,7 +202,7 @@ async function abortCapture() {
     const data = response.data;
 
     // Don't show alert for Streamlink/RTSP providers - UI already shows the status
-    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp') {
+    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp' && props.streamer.provider !== 'ytdlp') {
         alert(data.message);
     }
 
@@ -230,7 +230,7 @@ async function forceRecord() {
     const data = response.data;
 
     // Don't show alert for Streamlink/RTSP providers - UI already shows the status
-    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp') {
+    if (data.message && props.streamer.provider !== 'streamlink' && props.streamer.provider !== 'rtsp' && props.streamer.provider !== 'ytdlp') {
         alert(data.message);
     }
 

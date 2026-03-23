@@ -36,7 +36,7 @@ export async function KillJob(
     const method: NodeJS.Signals =
         req.query.method !== undefined && req.query.method !== ""
             ? (req.query.method as NodeJS.Signals)
-            : "SIGTERM";
+            : "SIGINT";
 
     if (!job) {
         res.api(404, {

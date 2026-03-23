@@ -15,6 +15,7 @@ import { YouTubeChannel } from "@/Core/Providers/YouTube/YouTubeChannel";
 import { YouTubeVOD } from "@/Core/Providers/YouTube/YouTubeVOD";
 import { RTSPChannel } from "@/Core/Providers/RTSP/RTSPChannel";
 import { StreamlinkChannel } from "@/Core/Providers/Streamlink/StreamlinkChannel";
+import { YTDLpChannel } from "@/Core/Providers/YTDLp/YTDLpChannel";
 import { Webhook } from "@/Core/Webhook";
 import { debugLog } from "@/Helpers/Console";
 import {
@@ -39,12 +40,14 @@ import type {
     ApiResponse,
     ApiChannels,
 } from "@common/Api/Api";
-import type {
-    KickChannelConfig,
+import {
+    ChannelConfig,
     TwitchChannelConfig,
     YouTubeChannelConfig,
+    KickChannelConfig,
     RTSPChannelConfig,
     StreamlinkChannelConfig,
+    YTDLpChannelConfig,
 } from "@common/Config";
 import type { Providers } from "@common/Defs";
 import { VideoQualityArray } from "@common/Defs";
@@ -84,7 +87,7 @@ export async function ListChannels(
 
 const getChannelFromRequest = (
     req: express.Request
-): TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel | undefined => {
+): TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel | YTDLpChannel | undefined => {
     if (req.params.uuid) {
         return (
             LiveStreamDVR.getInstance().getChannelByUUID(req.params.uuid) ||
@@ -331,6 +334,32 @@ export function UpdateChannel(
         const channel_config: StreamlinkChannelConfig = {
             uuid: channel.uuid,
             provider: "streamlink",
+            internalId: channel.internalId,
+            internalName: channel.internalName,
+            url: url ?? channel.config?.url ?? "",
+            icon_url: icon_url ?? channel.config?.icon_url,
+            quality: quality ?? channel.config?.quality ?? [],
+            match: match ?? channel.config?.match ?? [],
+            download_chat: false,
+            burn_chat: false,
+            no_capture: no_capture ?? channel.config?.no_capture ?? false,
+            live_chat: false,
+            no_cleanup: no_cleanup ?? channel.config?.no_cleanup ?? false,
+            max_storage: max_storage ?? channel.config?.max_storage ?? 0,
+            max_vods: max_vods ?? channel.config?.max_vods ?? 0,
+            download_vod_at_end: download_vod_at_end ?? channel.config?.download_vod_at_end ?? false,
+            download_vod_at_end_quality: download_vod_at_end_quality ?? channel.config?.download_vod_at_end_quality ?? "best",
+            check_interval: check_interval ?? channel.config?.check_interval,
+            check_interval_unit: check_interval_unit ?? channel.config?.check_interval_unit,
+            max_check_duration: max_check_duration ?? channel.config?.max_check_duration,
+            max_check_duration_unit: max_check_duration_unit ?? channel.config?.max_check_duration_unit,
+            schedule_enabled: schedule_enabled ?? channel.config?.schedule_enabled,
+        };
+        channel.update(channel_config);
+    } else if (channel instanceof YTDLpChannel) {
+        const channel_config: YTDLpChannelConfig = {
+            uuid: channel.uuid,
+            provider: "ytdlp",
             internalId: channel.internalId,
             internalName: channel.internalName,
             url: url ?? channel.config?.url ?? "",
@@ -946,6 +975,60 @@ export async function AddChannel(
             "route.channels.add",
             `Created channel: ${new_channel.displayName}`
         );
+    } else if (provider === "ytdlp") {
+        if (!formdata.url) {
+            res.api(400, {
+                status: "ERROR",
+                message: "No URL specified",
+            } as ApiErrorResponse);
+            return;
+        }
+
+        const channel_config: YTDLpChannelConfig = {
+            uuid: "",
+            provider: "ytdlp",
+            internalId: "", // Not used
+            internalName: formdata.internalName || "yt-dlp",
+            url: formdata.url,
+            icon_url: formdata.icon_url,
+            quality: formdata.quality,
+            match: formdata.match,
+            download_chat: false,
+            burn_chat: false,
+            no_capture: formdata.no_capture,
+            live_chat: false,
+            no_cleanup: formdata.no_cleanup,
+            max_storage: formdata.max_storage,
+            max_vods: formdata.max_vods,
+            download_vod_at_end: formdata.download_vod_at_end,
+            download_vod_at_end_quality: formdata.download_vod_at_end_quality,
+            check_interval: formdata.check_interval,
+            check_interval_unit: formdata.check_interval_unit,
+            max_check_duration: formdata.max_check_duration,
+            max_check_duration_unit: formdata.max_check_duration_unit,
+            schedule_enabled: formdata.schedule_enabled,
+        };
+
+        try {
+            new_channel = await YTDLpChannel.create(channel_config);
+        } catch (error) {
+            log(
+                LOGLEVEL.ERROR,
+                "route.channels.add",
+                `Failed to create channel: ${error}`
+            );
+            res.api(400, {
+                status: "ERROR",
+                message: (error as Error).message,
+            } as ApiErrorResponse);
+            return;
+        }
+
+        log(
+            LOGLEVEL.SUCCESS,
+            "route.channels.add",
+            `Created channel: ${new_channel.displayName}`
+        );
     }
 
     if (!new_channel) {
@@ -1028,6 +1111,7 @@ export async function DownloadVideo(
             title: video.title || "",
             game_name: extraData.game_name || "",
             game_id: extraData.game_id || "",
+            provider: channel.config?.provider || "base",
         };
 
         return formatString(
@@ -1772,7 +1856,8 @@ export async function ForceRecord(
         }
     } else if (
         channel instanceof RTSPChannel ||
-        channel instanceof StreamlinkChannel
+        channel instanceof StreamlinkChannel ||
+        channel instanceof YTDLpChannel
     ) {
         if (channel.is_capturing) {
             res.api(400, {

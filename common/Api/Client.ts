@@ -173,6 +173,11 @@ export interface ApiStreamlinkVod extends ApiBaseVod {
     provider: "streamlink";
 }
 
+// YTDLp
+export interface ApiYTDLpVod extends ApiBaseVod {
+    provider: "ytdlp";
+}
+
 export type ApiSettingsField = {
     key: string;
     group: string;
@@ -291,11 +296,20 @@ export interface ApiRTSPChannel extends ApiBaseChannel {
 
 export interface ApiStreamlinkChannel extends ApiBaseChannel {
     provider: "streamlink";
+    url: string;
+    icon_url?: string;
     vods_list: ApiStreamlinkVod[];
 }
 
-export type ApiChannels = ApiTwitchChannel | ApiYouTubeChannel | ApiKickChannel | ApiRTSPChannel | ApiStreamlinkChannel;
-export type ApiVods = ApiTwitchVod | ApiYouTubeVod | ApiKickVod | ApiRTSPVod | ApiStreamlinkVod;
+export interface ApiYTDLpChannel extends ApiBaseChannel {
+    provider: "ytdlp";
+    url: string;
+    icon_url?: string;
+    vods_list: ApiYTDLpVod[];
+}
+
+export type ApiChannels = ApiTwitchChannel | ApiYouTubeChannel | ApiKickChannel | ApiRTSPChannel | ApiStreamlinkChannel | ApiYTDLpChannel;
+export type ApiVods = ApiTwitchVod | ApiYouTubeVod | ApiKickVod | ApiRTSPVod | ApiStreamlinkVod | ApiYTDLpVod;
 
 export type ApiSubscription = {
     type: string;

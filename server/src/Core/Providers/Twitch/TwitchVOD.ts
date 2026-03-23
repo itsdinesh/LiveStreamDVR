@@ -2068,6 +2068,7 @@ export class TwitchVOD extends BaseVOD {
                 title: this.stream_title || this.external_vod_title || "",
                 game_name: this.game_name,
                 game_id: this.current_game?.id || "",
+                provider: this.provider,
                 chapter_number: chapterIndex.toString(),
                 chapter_title: chapter.title,
                 chapter_game_id: chapter.game_id?.toString() || "",

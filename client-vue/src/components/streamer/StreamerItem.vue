@@ -20,19 +20,19 @@
                     &middot;
                     <span class="streamer-vods-size" title="Total vod size">{{ formatBytes(streamer.vods_size) }}</span
                     ><!-- total size -->
-                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-subbed-status">
+                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp' && streamer.provider !== 'ytdlp'" class="streamer-subbed-status">
                         &middot;
                         <template v-if="streamer.api_getSubscriptionStatus">{{ t("messages.subscribed") }}</template>
                         <span v-else class="text-is-error" title="Could just be that subscriptions were made before this feature was implemented.">
                             {{ t("streamer.one-or-more-subscriptions-missing") }}
                         </span>
                     </span><!-- sub status -->
-                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-type" title="Broadcaster type">
+                    <span v-if="streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp' && streamer.provider !== 'ytdlp'" class="streamer-type" title="Broadcaster type">
                         &middot;
                         <template v-if="streamer.broadcaster_type">{{ streamer.broadcaster_type }}</template>
                         <template v-else>Free</template>
                     </span>
-                    <span v-if="!streamer.saves_vods && streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp'" class="streamer-saves-vods text-is-error"> &middot; {{ t("streamer.no-save-vods") }} </span>
+                    <span v-if="!streamer.saves_vods && streamer.provider !== 'streamlink' && streamer.provider !== 'rtsp' && streamer.provider !== 'ytdlp'" class="streamer-saves-vods text-is-error"> &middot; {{ t("streamer.no-save-vods") }} </span>
                     &middot;
                     <span class="streamer-sxe" title="Season and episode">
                         {{ streamer.current_season }}/{{ streamer.current_stream_number.toString().padStart(2, "0") }}

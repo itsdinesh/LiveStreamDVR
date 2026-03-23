@@ -126,14 +126,16 @@ export class BaseAutomator {
             title: this.getTitle(),
             game_name: this.getGameName(),
             game_id: this.getGameID(),
+            provider: this.getProviderName(),
         };
 
-        return sanitize(
-            formatString(
-                Config.getInstance().cfg("filename_vod_folder"),
-                variables
-            )
+        const basename = formatString(
+            Config.getInstance().cfg("filename_vod_folder"),
+            variables,
+            true
         );
+
+        return sanitize(basename.replace(/ -  - /g, " - "));
     }
 
     public vodBasenameTemplate(): string {
@@ -177,11 +179,16 @@ export class BaseAutomator {
             title: this.getTitle(),
             game_name: this.getGameName(),
             game_id: this.getGameID(),
+            provider: this.getProviderName(),
         };
 
-        return sanitize(
-            formatString(Config.getInstance().cfg("filename_vod"), variables)
+        const basename = formatString(
+            Config.getInstance().cfg("filename_vod"),
+            variables,
+            true
         );
+
+        return sanitize(basename.replace(/ -  - /g, " - "));
     }
 
     public fulldir(): string {
@@ -259,6 +266,19 @@ export class BaseAutomator {
             }
         }
         return "";
+    }
+
+    public getProviderName(): string {
+        const names: Record<string, string> = {
+            base: "Base",
+            twitch: "Twitch",
+            youtube: "YouTube",
+            kick: "Kick",
+            rtsp: "RTSP",
+            streamlink: "Streamlink",
+            ytdlp: "yt-dlp",
+        };
+        return names[this.realm] || this.realm;
     }
 
     public streamURL(): string {

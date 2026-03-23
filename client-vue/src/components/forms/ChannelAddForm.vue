@@ -69,7 +69,7 @@
         </div>
 
         <!-- generic url -->
-        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink' || formData.provider == 'ytdlp'" class="field">
             <label class="label">URL <span class="required">*</span></label>
             <div class="control">
                 <input v-model="formData.url" class="input" type="text" name="url" required />
@@ -77,7 +77,7 @@
         </div>
 
         <!-- generic internal name -->
-        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink' || formData.provider == 'ytdlp'" class="field">
             <label class="label">Internal Name / ID <span class="required">*</span></label>
             <div class="control">
                 <input v-model="formData.internalName" class="input" type="text" name="internalName" required />
@@ -85,7 +85,7 @@
             <p class="input-help">Unique identifier for this stream (e.g. security_cam_1)</p>
         </div>
         
-        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink'" class="field">
+        <div v-if="formData.provider == 'rtsp' || formData.provider == 'streamlink' || formData.provider == 'ytdlp'" class="field">
             <label class="label">Icon URL</label>
             <div class="control">
                 <input v-model="formData.icon_url" class="input" type="text" name="icon_url" />
@@ -297,6 +297,7 @@ const providers = [
     { value: "kick", label: "Kick" },
     { value: "rtsp", label: "RTSP" },
     { value: "streamlink", label: "Streamlink" },
+    { value: "ytdlp", label: "yt-dlp" },
 ];
 
 // computed

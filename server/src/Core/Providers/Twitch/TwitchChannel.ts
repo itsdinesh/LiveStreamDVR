@@ -2831,6 +2831,7 @@ export class TwitchChannel extends BaseChannel {
                 title: latestVodData.title,
                 game_name: gameName,
                 game_id: gameId,
+                provider: this.provider,
             };
 
             const vodFolderBase = sanitize(
@@ -2878,6 +2879,7 @@ export class TwitchChannel extends BaseChannel {
             title: latestVodData.title,
             game_name: gameName,
             game_id: gameId,
+            provider: this.provider,
         };
 
         const vodFilenameBase = sanitize(

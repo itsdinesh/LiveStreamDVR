@@ -11,6 +11,7 @@ import path from "node:path";
 import { BaseConfigCacheFolder, BaseConfigDataFolder } from "./BaseConfig";
 import { LOGLEVEL, log } from "./Log";
 import { Webhook } from "./Webhook";
+import process from "process";
 
 export interface TwitchAutomatorJobJSON {
     name: string;
@@ -19,6 +20,7 @@ export interface TwitchAutomatorJobJSON {
     dt_started_at: string;
     bin?: string;
     args?: string[];
+    detached?: boolean;
 }
 
 interface JobEvents {
@@ -128,6 +130,7 @@ export class Job extends EventEmitter implements JobEvents {
     public args?: string[];
 
     public progress = 0;
+    public detached = false;
 
     public dummy = false;
 
@@ -274,6 +277,7 @@ export class Job extends EventEmitter implements JobEvents {
         job.metadata = data.metadata;
         job.bin = data.bin;
         job.args = data.args;
+        job.detached = data.detached || false;
 
         // TwitchlogAdvanced(LOGLEVEL.DEBUG, "job", "Job {$this->name} loaded, proceed to get status.", $this->metadata);
 
@@ -766,11 +770,16 @@ export class Job extends EventEmitter implements JobEvents {
      * @param {NodeJS.Signals} method Method to use to quit process
      * @returns {Promise<false|ExecReturn>} False if no PID set, otherwise the result of the quit command
      */
-    public async kill(method: NodeJS.Signals = "SIGTERM"): Promise<boolean> {
+    public async kill(method: NodeJS.Signals = "SIGINT"): Promise<boolean> {
         if (this.process) {
             let success;
             try {
-                success = this.process.kill(method);
+                if (this.detached && !is_windows() && this.process.pid) {
+                    process.kill(-this.process.pid, method);
+                    success = true;
+                } else {
+                    success = this.process.kill(method);
+                }
             } catch (error) {
                 log(
                     LOGLEVEL.ERROR,
@@ -875,9 +884,10 @@ export class Job extends EventEmitter implements JobEvents {
             const signalFlag = `-${method.substring(3).toLocaleLowerCase()}`;
 
             try {
+                const pidStr = this.detached ? `-${pid.toString()}` : pid.toString();
                 exec = await execSimple(
                     "kill",
-                    [signalFlag, pid.toString()],
+                    [signalFlag, pidStr],
                     "linux process kill"
                 );
             } catch (error) {
@@ -1076,6 +1086,7 @@ export class Job extends EventEmitter implements JobEvents {
             dt_started_at: this.dt_started_at?.toISOString() || "",
             bin: this.bin,
             args: this.args,
+            detached: this.detached,
         };
     }
 

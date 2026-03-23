@@ -16,6 +16,8 @@ import { RTSPChannel } from "@/Core/Providers/RTSP/RTSPChannel";
 import type { RTSPVOD } from "@/Core/Providers/RTSP/RTSPVOD";
 import { StreamlinkChannel } from "@/Core/Providers/Streamlink/StreamlinkChannel";
 import type { StreamlinkVOD } from "@/Core/Providers/Streamlink/StreamlinkVOD";
+import { YTDLpChannel } from "@/Core/Providers/YTDLp/YTDLpChannel";
+import type { YTDLpVOD } from "@/Core/Providers/YTDLp/YTDLpVOD";
 import { debugLog } from "@/Helpers/Console";
 import { formatBytes } from "@/Helpers/Format";
 import {
@@ -61,8 +63,8 @@ import { Webhook } from "./Webhook";
 
 const argv = minimist(process.argv.slice(2));
 
-export type ChannelTypes = TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel;
-export type VODTypes = TwitchVOD | YouTubeVOD | KickVOD | RTSPVOD | StreamlinkVOD;
+export type ChannelTypes = TwitchChannel | YouTubeChannel | KickChannel | RTSPChannel | StreamlinkChannel | YTDLpChannel;
+export type VODTypes = TwitchVOD | YouTubeVOD | KickVOD | RTSPVOD | StreamlinkVOD | YTDLpVOD;
 export type ChapterTypes = TwitchVODChapter | BaseVODChapter;
 
 export class LiveStreamDVR {
@@ -475,6 +477,24 @@ export class LiveStreamDVR {
                         await ch.postLoad();
                         ch.getVods().forEach((vod) => vod.postLoad());
                         log(LOGLEVEL.SUCCESS, "dvr.load.streamlink", `Loaded Streamlink channel ${ch.internalName}`);
+                        if (ch.config?.schedule_enabled) {
+                            await ch.startWatching();
+                        }
+                    }
+                } else if (channelConfig.provider == "ytdlp") {
+                    let ch: YTDLpChannel;
+                    try {
+                        ch = await YTDLpChannel.load(channelConfig.uuid);
+                    } catch (th) {
+                        log(LOGLEVEL.FATAL, "dvr.load.ytdlp", `yt-dlp Channel ${channelConfig.internalName} could not be loaded: ${th}`);
+                        console.error(th);
+                        continue;
+                    }
+                    if (ch) {
+                        this.addChannel(ch);
+                        await ch.postLoad();
+                        ch.getVods().forEach((vod) => vod.postLoad());
+                        log(LOGLEVEL.SUCCESS, "dvr.load.ytdlp", `Loaded yt-dlp channel ${ch.internalName}`);
                         if (ch.config?.schedule_enabled) {
                             await ch.startWatching();
                         }

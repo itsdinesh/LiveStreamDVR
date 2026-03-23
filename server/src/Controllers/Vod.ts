@@ -957,6 +957,7 @@ export async function RenameVod(
         title: vod.stream_title || "",
         game_name: vod.game_name || "",
         game_id: vod.game_id || "",
+        provider: channel.config?.provider || "base",
     };
 
     const basename = sanitize(

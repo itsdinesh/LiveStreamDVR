@@ -25,7 +25,9 @@ import axios from "axios";
 import { parseJSON } from "date-fns";
 import { defineStore } from "pinia";
 import type { WinstonLogLine } from "@common/Log";
-import { isTwitchChannel, isTwitchApiChannel, isYouTubeApiChannel, isTwitchApiVOD, isYouTubeVOD, isYouTubeChannel, isYouTubeApiVOD, isRTSPApiChannel, isStreamlinkApiChannel, isRTSPChannel, isStreamlinkChannel } from "@/mixins/newhelpers";
+import { isTwitchChannel, isTwitchApiChannel, isYouTubeApiChannel, isTwitchApiVOD, isYouTubeVOD, isYouTubeChannel, isYouTubeApiVOD, isRTSPApiChannel, isStreamlinkApiChannel, isYTDLpApiChannel, isRTSPChannel, isStreamlinkChannel, isYTDLpChannel, isYTDLpApiVOD } from "@/mixins/newhelpers";
+import YTDLpChannel from "@/core/Providers/YTDLp/YTDLpChannel";
+import BaseVOD from "@/core/Providers/Base/BaseVOD";
 
 interface StoreType {
     app_name: string;
@@ -160,6 +162,8 @@ export const useStore = defineStore("twitchAutomator", {
                             return RTSPChannel.makeFromApiResponse(channel);
                         } else if (isStreamlinkApiChannel(channel)) {
                             return StreamlinkChannel.makeFromApiResponse(channel);
+                        } else if (isYTDLpApiChannel(channel)) {
+                            return YTDLpChannel.makeFromApiResponse(channel);
                         }
                     })
                     .filter((c): c is ChannelTypes => c !== undefined);
@@ -235,6 +239,11 @@ export const useStore = defineStore("twitchAutomator", {
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
+            } else if (isYTDLpApiVOD(vod_data)) {
+                const index = this.streamerList.findIndex((s) => isYTDLpChannel(s) && s.uuid === vod_data.uuid);
+                if (index === -1) return false;
+                const vod = BaseVOD.makeFromApiResponse(vod_data);
+                return this.updateVod(vod);
             }
             return false;
         },
@@ -244,6 +253,7 @@ export const useStore = defineStore("twitchAutomator", {
             const streamer = this.streamerList.find<ChannelTypes>((s): s is ChannelTypes => {
                 if (provider == "twitch") return isTwitchChannel(s) && s.uuid === vod.channel_uuid;
                 if (provider == "youtube") return isYouTubeChannel(s) && s.uuid === vod.channel_uuid;
+                if (provider == "ytdlp") return isYTDLpChannel(s) && s.uuid === vod.channel_uuid;
                 return false;
             });
             if (!streamer) return false;
@@ -257,6 +267,8 @@ export const useStore = defineStore("twitchAutomator", {
                     streamer.vods_list.push(vod as TwitchVOD);
                 } else if (streamer instanceof YouTubeChannel) {
                     streamer.vods_list.push(vod as YouTubeVOD);
+                } else if (streamer instanceof YTDLpChannel) {
+                    streamer.vods_list.push(vod as BaseVOD);
                 }
             } else {
                 // console.debug("updating vod", vod);
@@ -278,6 +290,11 @@ export const useStore = defineStore("twitchAutomator", {
                 const index = this.streamerList.findIndex((channel) => channel instanceof YouTubeChannel && channel.uuid === vod_data.channel_uuid);
                 if (index === -1) return false;
                 const vod = YouTubeVOD.makeFromApiResponse(vod_data);
+                return this.updateVod(vod);
+            } else if (isYTDLpApiVOD(vod_data)) {
+                const index = this.streamerList.findIndex((channel) => channel instanceof YTDLpChannel && channel.uuid === vod_data.channel_uuid);
+                if (index === -1) return false;
+                const vod = BaseVOD.makeFromApiResponse(vod_data);
                 return this.updateVod(vod);
             }
 
@@ -363,6 +380,11 @@ export const useStore = defineStore("twitchAutomator", {
                 if (index === -1) return false;
                 const streamer = StreamlinkChannel.makeFromApiResponse(streamer_data);
                 return this.updateStreamer(streamer);
+            } else if (streamer_data.provider == "ytdlp") {
+                const index = this.streamerList.findIndex((channel) => channel instanceof YTDLpChannel && channel.uuid === streamer_data.uuid);
+                if (index === -1) return false;
+                const streamer = YTDLpChannel.makeFromApiResponse(streamer_data as any);
+                return this.updateStreamer(streamer);
             }
             return false;
         },
@@ -389,6 +411,8 @@ export const useStore = defineStore("twitchAutomator", {
                 streamer = RTSPChannel.makeFromApiResponse(streamer_data);
             } else if (isStreamlinkApiChannel(streamer_data)) {
                 streamer = StreamlinkChannel.makeFromApiResponse(streamer_data);
+            } else if (isYTDLpApiChannel(streamer_data)) {
+                streamer = YTDLpChannel.makeFromApiResponse(streamer_data);
             } else {
                 console.error("updateStreamerFromData", streamer_data);
                 return false;
@@ -409,6 +433,8 @@ export const useStore = defineStore("twitchAutomator", {
                     return RTSPChannel.makeFromApiResponse(channel);
                 } else if (channel.provider == "streamlink") {
                     return StreamlinkChannel.makeFromApiResponse(channel);
+                } else if (channel.provider == "ytdlp") {
+                    return YTDLpChannel.makeFromApiResponse(channel);
                 }
                 throw new Error(`Unknown provider ${channel}`);
             });

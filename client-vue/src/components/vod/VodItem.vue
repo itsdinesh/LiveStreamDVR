@@ -317,6 +317,7 @@ const renameVodTemplatePreview = computed(() => {
         title: props.vod.getTitle() || "",
         game_name: isTwitchVOD(props.vod) ? (props.vod.current_game ? props.vod.current_game.name : "") : "",
         game_id: isTwitchVOD(props.vod) ? (props.vod.current_game ? props.vod.current_game.id : "") : "",
+        provider: props.vod.provider,
     };
     const replaced_string = formatString(renameVodSettings.value.template, replacements);
     return replaced_string;

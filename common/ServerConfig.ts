@@ -31,6 +31,13 @@ export const settingsFields = createSettingsFields({
         help: "e.g. /usr/bin/ffmpeg",
         required: true,
     },
+    ytdlp_path: {
+        group: "Binaries",
+        text: "yt-dlp executable path",
+        type: "string",
+        help: "e.g. /usr/local/bin/yt-dlp",
+        required: false,
+    },
     mediainfo_path: {
         group: "Binaries",
         text: "Mediainfo executable path",
@@ -489,6 +496,20 @@ export const settingsFields = createSettingsFields({
         help: "Disable quota checks, not recommended unless you have tons of quota",
     },
 
+    "ytdlp.cookies_path": {
+        group: "yt-dlp",
+        text: "yt-dlp cookies.txt path",
+        type: "string",
+        help: "Absolute path to the cookies.txt file for yt-dlp.",
+    },
+    "ytdlp.po_token": {
+        group: "yt-dlp",
+        text: "yt-dlp po_token",
+        type: "string",
+        secret: true,
+        help: "po_token parameter required for YouTube captures via yt-dlp (e.g. mweb.gvs+...).",
+    },
+
     // { 'key': 'hook_callback', 		'text': 'Hook callback', 									'type': 'string', 'required': true },
     // {'key': 'timezone', 				'group': 'Interface',	'text': 'Timezone', 										'type': 'array',		'default': 'UTC', 'help': 'This only affects the GUI, not the values stored', 'deprecated': true},
 
@@ -764,7 +785,7 @@ export const settingsFields = createSettingsFields({
         group: "Video",
         text: "Vod filename",
         type: "template",
-        default: "{internalName}_{date}_{id}",
+        default: "{year}-{month}-{day} {hour}_{minute}_{second} - [{provider}] - {title} - {id}",
         help: "Vod filename.",
         replacements: VodBasenameFields,
         context: "{template}.json, {template}.mp4",
@@ -774,7 +795,7 @@ export const settingsFields = createSettingsFields({
         group: "Video",
         text: "Vod folder name",
         type: "template",
-        default: "{internalName}_{date}_{id}",
+        default: "{year}-{month}-{day} {hour}_{minute}_{second} - [{provider}] - {title} - {id}",
         help: "Vod folder filename.",
         replacements: VodBasenameFields,
         context: "/vods/{internalName}/{template}/",

@@ -4,6 +4,7 @@ import { LOGLEVEL, log } from "@/Core/Log";
 import chalk from "chalk";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { spawn } from "node:child_process";
+import { is_windows } from "@/Helpers/System";
 import type { Stream } from "node:stream";
 
 /**
@@ -545,7 +546,8 @@ export function startJob(
     jobName: string,
     bin: string,
     args: string[],
-    env: Record<string, string> = {}
+    env: Record<string, string> = {},
+    cwd?: string
 ): Job | false {
     const envs = Object.keys(env).length > 0 ? env : process.env;
 
@@ -553,9 +555,10 @@ export function startJob(
     const stderr: string[] = [];
 
     const jobProcess = spawn(bin, args || [], {
-        // detached: true,
+        detached: !is_windows(),
         windowsHide: true,
         env: envs,
+        cwd: cwd,
     });
 
     console.log("startJob process", jobProcess.spawnfile, jobProcess.spawnargs);
@@ -588,6 +591,7 @@ export function startJob(
         );
         job = Job.create(jobName);
         job.setPid(jobProcess.pid);
+        job.detached = !is_windows();
         job.setExec(bin, args);
         job.setProcess(jobProcess);
         job.addMetadata({
