@@ -2017,10 +2017,13 @@ export class BaseVOD {
         if (
             this.segments.length == 0 &&
             !this.is_finalized &&
-            !this.not_started
+            !this.not_started &&
+            !this.is_converting
         ) {
-            throw new Error(
-                `No segments available for ${this.basename} and VOD is not finalized and started. Completely broken. Edit the JSON file manually.`
+            log(
+                LOGLEVEL.ERROR,
+                "vod.setupAssoc",
+                `No segments available for ${this.basename} and VOD is not finalized and started. This VOD is likely broken.`
             );
         }
 
@@ -2591,7 +2594,7 @@ export class BaseVOD {
     }
 
     public async getConvertingStatus(): Promise<JobStatus> {
-        const job = Job.findJob(`convert_${this.basename}`);
+        const job = Job.findJob(`convert_${this.basename}`) || Job.findJob(`remux_${this.basename}`);
         return job ? await job.getStatus() : JobStatus.STOPPED;
     }
 
@@ -2840,9 +2843,19 @@ export class BaseVOD {
                     if (fs.existsSync(outFile)) {
                         console.log(
                             chalk.bgRed.whiteBright(
-                                `🛠️ [${source}] Converted file '${outFile}' for '${this.basename}' already exists, skipping remux!`
+                                `🛠️ [${source}] Converted file '${outFile}' for '${this.basename}' already exists, adding segment!`
                             )
                         );
+                        await this.addSegment(
+                            `${this.basename}.${containerExt}`
+                        );
+                        this.is_converting = false;
+                        if (fs.existsSync(inFile)) fs.unlinkSync(inFile);
+                        await this.finalize();
+                        await this.saveJSON("fix remux exists");
+                        this.issueFixCount++;
+                        this.issueFixes["not_remuxed"] = true;
+                        return false;
                     } else {
                         this.is_converting = true;
                         remuxFile(inFile, outFile)
@@ -2856,6 +2869,8 @@ export class BaseVOD {
                                     `${this.basename}.${containerExt}`
                                 );
                                 this.is_converting = false;
+                                if (fs.existsSync(inFile))
+                                    fs.unlinkSync(inFile);
                                 await this.finalize();
                                 await this.saveJSON("fix remux");
                             })
